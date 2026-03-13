@@ -1,0 +1,6 @@
+config.yml
+tmp/
+samples/
+*.DS_Store
+.bundle/
+vendor/bundle/

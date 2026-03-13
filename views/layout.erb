@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendor Bridge - POSaBIT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            posabit: {
+              green: '#7CC144',
+              'green-dark': '#6AAE38',
+              teal: '#6EBBD5',
+              'teal-light': '#E8F5FA',
+              dark: '#1A1A1B',
+              text: '#333333',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="bg-gray-50 min-h-screen text-posabit-text">
+  <nav class="bg-posabit-dark">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="6" fill="#7CC144"/>
+          <path d="M8 14l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text-lg font-semibold text-white">Vendor Bridge</span>
+      </a>
+      <span class="text-sm text-gray-400">POSaBIT Product Import Tool</span>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <%= yield %>
+  </main>
+</body>
+</html>

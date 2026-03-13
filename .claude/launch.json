@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vendor-bridge",
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "puma", "config.ru", "-p", "4567"],
+      "port": 4567
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require "optparse"
 require "csv"
-require_relative "lib/vendor_bridge/adapters/iheartjane_v1"
+require_relative "lib/adapters/iheartjane_v1"
 
 source = "iheartjane"
 output = nil

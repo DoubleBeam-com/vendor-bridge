@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ruby -rcsv -e ':*)"
+      "Bash(ruby -rcsv -e ':*)",
+      "Bash(bundle exec:*)"
     ]
   }
 }

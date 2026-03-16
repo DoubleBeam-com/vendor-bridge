@@ -3,8 +3,8 @@ require "sinatra/json"
 require "securerandom"
 require "json"
 require "csv"
-require_relative "lib/vendor_bridge/adapters/iheartjane_v1"
-require_relative "lib/vendor_bridge/adapters/context_builder"
+require_relative "lib/adapters/iheartjane_v1"
+require_relative "lib/adapters/context_builder"
 
 module VendorBridge
   class App < Sinatra::Base

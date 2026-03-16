@@ -125,60 +125,9 @@ Still stuck? Open an issue at [github.com/DoubleBeam-com/vendor-bridge/issues](h
 
 ---
 
-## For Developers
+## For Developers & AI Assistants
 
-<details>
-<summary>Project structure and adding new sources</summary>
-
-### Project Structure
-
-```
-vendor-bridge/
-  app.rb                        # Sinatra web server
-  config.ru                     # Rack config
-  flatten.rb                    # CLI alternative
-  lib/vendor_bridge/
-    adapters/
-      base.rb                   # Adapter interface
-      registry.rb               # Adapter lookup
-      iheartjane_v1.rb          # iHeartJane parser
-    transforms/
-      row_filter.rb             # Filters junk rows
-  views/                        # ERB templates
-  public/                       # Static assets
-```
-
-### CLI Usage
-
-```
-ruby flatten.rb --source iheartjane --output products.csv your_file.xlsx
-```
-
-### Adding a New Source Adapter
-
-Create a new file in `lib/vendor_bridge/adapters/`:
-
-```ruby
-require_relative "base"
-require_relative "registry"
-
-module VendorBridge
-  module Adapters
-    class DutchieV1 < Base
-      def flatten(file_path)
-        # Parse the file, return:
-        { rows: [...], columns: [...], stats: { ... } }
-      end
-    end
-
-    Registry.register("dutchie", DutchieV1)
-  end
-end
-```
-
-Require it in `flatten.rb` and the web UI picks it up automatically.
-
-</details>
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full project architecture, adapter interface, and how to add new sources.
 
 ---
 

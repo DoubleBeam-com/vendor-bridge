@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require "optparse"
 require "csv"
-require_relative "lib/adapters/iheartjane_v1"
+Dir[File.join(__dir__, "lib/adapters/*.rb")].each { |f| require f }
 
 source = "iheartjane"
 output = nil

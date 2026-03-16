@@ -3,8 +3,7 @@ require "sinatra/json"
 require "securerandom"
 require "json"
 require "csv"
-require_relative "lib/adapters/iheartjane_v1"
-require_relative "lib/adapters/context_builder"
+Dir[File.join(__dir__, "lib/adapters/*.rb")].each { |f| require f }
 
 module VendorBridge
   class App < Sinatra::Base
@@ -73,7 +72,7 @@ module VendorBridge
       rescue ArgumentError => e
         halt 400, e.message
       rescue StandardError => e
-        halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from iHeartJane, not a CSV or other format."
+        halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from #{adapter.source_label}, not a CSV or other format."
       end
 
       pipeline = {

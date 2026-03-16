@@ -1,3 +1,11 @@
+require "simplecov"
+SimpleCov.start do
+  add_filter "/spec/"
+  add_filter "/vendor/"
+  enable_coverage :branch
+  minimum_coverage line: 90, branch: 80
+end
+
 require "rack/test"
 require "rspec"
 

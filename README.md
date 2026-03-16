@@ -70,11 +70,21 @@ Go to: **http://localhost:4567**
 
 ### Step 4 — Check the results
 
-You'll see a summary of how many products were found in each category, plus a table showing the data. Scroll through to make sure it looks right.
+You'll see a summary of how many products were found in each category. Make sure the numbers look right.
 
-### Step 5 — Download
+### Step 5 — Download the flattened CSV
 
-Click **Download CSV**. This is the file you'll import into POSaBIT.
+Click **Download Flattened CSV**. This is your clean product data in a single file.
+
+### Step 6 — Match against your POSaBIT catalog (optional)
+
+If you want the tool to help you figure out which products are new vs. updates:
+
+1. Upload your current POSaBIT product export (CSV) on the same page
+2. Click **Download Context File**
+3. Open [Claude Cowork](https://cowork.claude.ai) and upload the context file
+4. Paste rows from your flattened CSV in small batches
+5. Claude will output a ready-to-import CSV — rows with an `id` are updates, blank `id` means new
 
 ### When you're done
 
@@ -127,7 +137,7 @@ Still stuck? Open an issue at [github.com/DoubleBeam-com/vendor-bridge/issues](h
 
 ## For Developers & AI Assistants
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for full project architecture, adapter interface, and how to add new sources.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full project architecture, adapter interface, and how to add new sources.
 
 ---
 

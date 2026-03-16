@@ -94,7 +94,7 @@ RSpec.describe VendorBridge::App do
     end
 
     context "with a valid CSV" do
-      it "stores the POSaBIT data and redirects" do
+      it "stores POSaBIT metadata and generates context file" do
         csv_path = fixture_path("sample_posabit.csv")
         post "/upload-posabit/#{pipeline_id}",
           posabit_file: Rack::Test::UploadedFile.new(csv_path, "text/csv")
@@ -102,11 +102,20 @@ RSpec.describe VendorBridge::App do
         expect(last_response.status).to eq(302)
         expect(last_response.headers["Location"]).to include("/preview/#{pipeline_id}")
 
-        # Verify data was stored
+        # Verify metadata was stored (not raw rows)
         pipeline = JSON.parse(File.read(File.join(__dir__, "../tmp/sessions/#{pipeline_id}.json")))
-        expect(pipeline["posabit_rows"]).to be_an(Array)
-        expect(pipeline["posabit_rows"].size).to eq(2)
+        expect(pipeline["has_posabit"]).to eq(true)
+        expect(pipeline["posabit_row_count"]).to eq(2)
         expect(pipeline["posabit_columns"]).to include("id", "brand_name", "strain_name")
+
+        # Verify data file was saved
+        data_csv = File.join(__dir__, "../data_files/posabit_data.csv")
+        expect(File.exist?(data_csv)).to be true
+
+        # Verify context file was auto-generated
+        context_md = File.join(__dir__, "../data_files/reconciliation_context.md")
+        expect(File.exist?(context_md)).to be true
+        expect(File.read(context_md)).to include("Product Reconciliation")
       end
     end
 
@@ -130,26 +139,25 @@ RSpec.describe VendorBridge::App do
 
   describe "GET /context/:id" do
     let(:pipeline_id) { "ctxtest123" }
+    let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }
+    let(:data_dir) { File.join(File.dirname(__FILE__), "../data_files") }
 
     before do
-      session_dir = File.join(File.dirname(__FILE__), "../tmp/sessions")
       FileUtils.mkdir_p(session_dir)
+      FileUtils.mkdir_p(data_dir)
       pipeline = {
         "id" => pipeline_id,
         "source" => "iheartjane",
         "filename" => "test.xlsx",
-        "rows" => [
-          { "Brand" => "Phat Panda", "Strain" => "Alien OG", "_product_category" => "Flower", "Product Name" => "Alien OG Mason" }
-        ],
-        "columns" => ["_product_category", "Brand", "Strain", "Product Name"],
-        "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
-        "posabit_rows" => [
-          { "id" => "458066", "name" => "Alien OG - Flower 3.5g", "brand_name" => "Phat Panda", "strain_name" => "Alien OG", "product_type_name" => "Flower" }
-        ],
+        "rows" => [],
+        "columns" => [],
+        "stats" => {},
+        "has_posabit" => true,
         "posabit_columns" => ["id", "name", "brand_name", "strain_name", "product_type_name"],
-        "posabit_filename" => "posabit_export.csv",
       }
       File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+      # Pre-generate the context file (normally done by upload-posabit route)
+      File.write(File.join(data_dir, "reconciliation_context.md"), "# POSaBIT Product Reconciliation\nMatching Rules\n")
     end
 
     it "downloads a markdown context file" do
@@ -158,27 +166,12 @@ RSpec.describe VendorBridge::App do
       expect(last_response.status).to eq(200)
       expect(last_response.headers["Content-Type"]).to include("text/markdown")
       expect(last_response.headers["Content-Disposition"]).to include("reconciliation_context.md")
-
-      body = last_response.body
-      expect(body).to include("Product Reconciliation")
-      expect(body).to include("Matching Rules")
-      expect(body).to include("Phat Panda")
-      expect(body).to include("458066")
+      expect(last_response.body).to include("Product Reconciliation")
     end
 
-    context "without POSaBIT data" do
+    context "without context file on disk" do
       it "returns 400" do
-        # Overwrite without posabit data
-        session_dir = File.join(File.dirname(__FILE__), "../tmp/sessions")
-        pipeline = {
-          "id" => pipeline_id,
-          "source" => "iheartjane",
-          "filename" => "test.xlsx",
-          "rows" => [],
-          "columns" => [],
-          "stats" => {},
-        }
-        File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+        FileUtils.rm_f(File.join(data_dir, "reconciliation_context.md"))
 
         get "/context/#{pipeline_id}"
         expect(last_response.status).to eq(400)

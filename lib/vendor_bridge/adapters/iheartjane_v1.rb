@@ -19,8 +19,57 @@ module VendorBridge
         "Merch."                => "Merchandise",
       }.freeze
 
+      def source_label
+        "iHeartJane"
+      end
+
+      def category_mapping
+        {
+          "Flower"      => "Flower",
+          "Preroll"     => "Preroll",
+          "Edible"      => "Edible Solid, Edible Liquid",
+          "Concentrate" => "Concentrate, BHO",
+          "Vape"        => "Cartridge",
+          "Topical"     => "Topical",
+          "Gear"        => "(no direct match — likely NEW)",
+          "Merchandise" => "(no direct match — likely NEW)",
+        }
+      end
+
+      def field_mapping
+        [
+          { vendor: "Brand",             posabit: "brand_name",  notes: "Also used for matching" },
+          { vendor: "Strain",            posabit: "strain_name", notes: "Also used for matching" },
+          { vendor: "_product_category", posabit: "product_type_name", notes: "Use the category mapping above" },
+          { vendor: "Product Name",      posabit: "name, display_name", notes: "Use for both fields" },
+          { vendor: "Product Description", posabit: "description", notes: "" },
+          { vendor: "Product Type",      posabit: "flower_type", notes: "Values like hybrid, indica, sativa" },
+          { vendor: "Pack Size",         posabit: "pack_size",   notes: "If available" },
+          { vendor: "Amount [g]",        posabit: "weight",      notes: "Also check Total Weight: Amount x Pack Size" },
+          { vendor: "IMAGE LINK ONLY...", posabit: "image_url", notes: "Only if value starts with http" },
+          { vendor: "Dosage (mg)",       posabit: "—",           notes: "Include if a matching column exists" },
+        ]
+      end
+
       def flatten(file_path)
-        xlsx = Roo::Excelx.new(file_path)
+        unless File.extname(file_path).downcase == ".xlsx"
+          raise ArgumentError, "This doesn't look like an iHeartJane product template. Please upload the original .xlsx file from iHeartJane."
+        end
+
+        begin
+          xlsx = Roo::Excelx.new(file_path)
+        rescue => e
+          raise ArgumentError, "This doesn't look like a valid iHeartJane product template. Make sure you're uploading the original Excel file (.xlsx) from iHeartJane, not a CSV or other format."
+        end
+
+        # Validate it has at least one expected product sheet
+        expected_sheets = CATEGORY_MAP.keys
+        found = xlsx.sheets.select { |s| expected_sheets.include?(s) }
+        if found.empty?
+          xlsx.close
+          raise ArgumentError, "This doesn't look like an iHeartJane product template. Expected sheets like Flower, Edible, or Vape but found: #{xlsx.sheets.join(", ")}"
+        end
+
         filter = Transforms::RowFilter.new
 
         all_rows = []

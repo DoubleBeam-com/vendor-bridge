@@ -1,0 +1,247 @@
+require_relative "spec_helper"
+
+RSpec.describe VendorBridge::App do
+  describe "GET /" do
+    it "renders the upload page" do
+      get "/"
+      expect(last_response).to be_ok
+      expect(last_response.body).to include("Upload Product File")
+    end
+  end
+
+  describe "POST /upload" do
+    context "with no file" do
+      it "returns 400" do
+        post "/upload", source: "iheartjane"
+        expect(last_response.status).to eq(400)
+      end
+    end
+
+    context "with a CSV instead of XLSX" do
+      it "returns 400 with a friendly error" do
+        csv_path = fixture_path("not_an_xlsx.csv")
+        post "/upload",
+          source: "iheartjane",
+          file: Rack::Test::UploadedFile.new(csv_path, "text/csv")
+
+        expect(last_response.status).to eq(400)
+        expect(last_response.body).to include("iHeartJane")
+        expect(last_response.body).not_to include("BACKTRACE")
+      end
+    end
+
+    context "with a garbage xlsx file" do
+      it "returns 400 with a friendly error" do
+        garbage_path = fixture_path("garbage.xlsx")
+        post "/upload",
+          source: "iheartjane",
+          file: Rack::Test::UploadedFile.new(garbage_path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        expect(last_response.status).to eq(400)
+        expect(last_response.body).to include("iHeartJane")
+        expect(last_response.body).not_to include("BACKTRACE")
+      end
+    end
+
+    context "with an unsupported file type" do
+      it "returns 400" do
+        # Create a temp .txt file
+        txt = Tempfile.new(["test", ".txt"])
+        txt.write("hello")
+        txt.rewind
+
+        post "/upload",
+          source: "iheartjane",
+          file: Rack::Test::UploadedFile.new(txt.path, "text/plain", original_filename: "test.txt")
+
+        expect(last_response.status).to eq(400)
+        expect(last_response.body).to include("Unsupported file type")
+        txt.close!
+      end
+    end
+
+    context "with a valid iHeartJane XLSX", if: File.exist?(File.join(__dir__, "../samples/iheartjane_template.xlsx")) do
+      let(:xlsx_path) { File.join(__dir__, "../samples/iheartjane_template.xlsx") }
+
+      it "processes and redirects to preview" do
+        post "/upload",
+          source: "iheartjane",
+          file: Rack::Test::UploadedFile.new(xlsx_path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        expect(last_response.status).to eq(302)
+        expect(last_response.headers["Location"]).to match(%r{/preview/\w+})
+      end
+    end
+  end
+
+  describe "POST /upload-posabit/:id" do
+    let(:pipeline_id) { "testid123" }
+
+    before do
+      # Create a minimal pipeline session
+      session_dir = File.join(File.dirname(__FILE__), "../tmp/sessions")
+      FileUtils.mkdir_p(session_dir)
+      pipeline = {
+        "id" => pipeline_id,
+        "step" => "preview",
+        "source" => "iheartjane",
+        "filename" => "test.xlsx",
+        "rows" => [{ "Brand" => "Test", "_product_category" => "Flower" }],
+        "columns" => ["Brand", "_product_category"],
+        "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
+      }
+      File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+    end
+
+    context "with a valid CSV" do
+      it "stores the POSaBIT data and redirects" do
+        csv_path = fixture_path("sample_posabit.csv")
+        post "/upload-posabit/#{pipeline_id}",
+          posabit_file: Rack::Test::UploadedFile.new(csv_path, "text/csv")
+
+        expect(last_response.status).to eq(302)
+        expect(last_response.headers["Location"]).to include("/preview/#{pipeline_id}")
+
+        # Verify data was stored
+        pipeline = JSON.parse(File.read(File.join(__dir__, "../tmp/sessions/#{pipeline_id}.json")))
+        expect(pipeline["posabit_rows"]).to be_an(Array)
+        expect(pipeline["posabit_rows"].size).to eq(2)
+        expect(pipeline["posabit_columns"]).to include("id", "brand_name", "strain_name")
+      end
+    end
+
+    context "with no file" do
+      it "returns 400" do
+        post "/upload-posabit/#{pipeline_id}"
+        expect(last_response.status).to eq(400)
+      end
+    end
+
+    context "with a bad session ID" do
+      it "returns 404" do
+        csv_path = fixture_path("sample_posabit.csv")
+        post "/upload-posabit/nonexistent",
+          posabit_file: Rack::Test::UploadedFile.new(csv_path, "text/csv")
+
+        expect(last_response.status).to eq(404)
+      end
+    end
+  end
+
+  describe "GET /context/:id" do
+    let(:pipeline_id) { "ctxtest123" }
+
+    before do
+      session_dir = File.join(File.dirname(__FILE__), "../tmp/sessions")
+      FileUtils.mkdir_p(session_dir)
+      pipeline = {
+        "id" => pipeline_id,
+        "source" => "iheartjane",
+        "filename" => "test.xlsx",
+        "rows" => [
+          { "Brand" => "Phat Panda", "Strain" => "Alien OG", "_product_category" => "Flower", "Product Name" => "Alien OG Mason" }
+        ],
+        "columns" => ["_product_category", "Brand", "Strain", "Product Name"],
+        "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
+        "posabit_rows" => [
+          { "id" => "458066", "name" => "Alien OG - Flower 3.5g", "brand_name" => "Phat Panda", "strain_name" => "Alien OG", "product_type_name" => "Flower" }
+        ],
+        "posabit_columns" => ["id", "name", "brand_name", "strain_name", "product_type_name"],
+        "posabit_filename" => "posabit_export.csv",
+      }
+      File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+    end
+
+    it "downloads a markdown context file" do
+      get "/context/#{pipeline_id}"
+
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["Content-Type"]).to include("text/markdown")
+      expect(last_response.headers["Content-Disposition"]).to include("reconciliation_context.md")
+
+      body = last_response.body
+      expect(body).to include("Product Reconciliation")
+      expect(body).to include("Matching Rules")
+      expect(body).to include("Phat Panda")
+      expect(body).to include("458066")
+    end
+
+    context "without POSaBIT data" do
+      it "returns 400" do
+        # Overwrite without posabit data
+        session_dir = File.join(File.dirname(__FILE__), "../tmp/sessions")
+        pipeline = {
+          "id" => pipeline_id,
+          "source" => "iheartjane",
+          "filename" => "test.xlsx",
+          "rows" => [],
+          "columns" => [],
+          "stats" => {},
+        }
+        File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+
+        get "/context/#{pipeline_id}"
+        expect(last_response.status).to eq(400)
+      end
+    end
+  end
+
+  describe "GET /preview/:id" do
+    let(:pipeline_id) { "prevtest1" }
+    let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }
+
+    before { FileUtils.mkdir_p(session_dir) }
+
+    context "with flattened data only" do
+      before do
+        pipeline = {
+          "id" => pipeline_id,
+          "source" => "iheartjane",
+          "filename" => "test.xlsx",
+          "rows" => [{ "Brand" => "Test", "_product_category" => "Flower" }],
+          "columns" => ["Brand", "_product_category"],
+          "stats" => { "Flower" => { "total" => 5, "kept" => 1 } },
+        }
+        File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+      end
+
+      it "shows stats and POSaBIT upload form" do
+        get "/preview/#{pipeline_id}"
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to include("Products Extracted")
+        expect(last_response.body).to include("Flower")
+        expect(last_response.body).to include("POSaBIT")
+        expect(last_response.body).to include("upload-posabit")
+      end
+    end
+
+    context "with both datasets loaded" do
+      before do
+        pipeline = {
+          "id" => pipeline_id,
+          "source" => "iheartjane",
+          "filename" => "test.xlsx",
+          "rows" => [{ "Brand" => "Test" }],
+          "columns" => ["Brand"],
+          "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
+          "posabit_rows" => [
+            { "id" => "1", "brand_name" => "Phat Panda", "product_type_name" => "Flower" }
+          ],
+          "posabit_columns" => ["id", "brand_name", "product_type_name"],
+          "posabit_filename" => "export.csv",
+        }
+        File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+      end
+
+      it "shows context download button" do
+        get "/preview/#{pipeline_id}"
+
+        expect(last_response).to be_ok
+        expect(last_response.body).to include("Download Context File")
+        expect(last_response.body).to include("POSaBIT Catalog Loaded")
+        expect(last_response.body).not_to include("upload-posabit")
+      end
+    end
+  end
+end

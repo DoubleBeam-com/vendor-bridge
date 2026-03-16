@@ -3,91 +3,162 @@
 <% stats = @pipeline["stats"] %>
 <% filename = @pipeline["filename"] %>
 <% id = @pipeline["id"] %>
+<% has_posabit = @pipeline["posabit_rows"] && !@pipeline["posabit_rows"].empty? %>
 
-<div class="mb-6 flex items-center justify-between">
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900">Preview</h1>
+<div class="max-w-2xl mx-auto space-y-8">
+
+  <!-- Step 1: Flatten results -->
+  <div class="text-center">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+      <svg class="w-8 h-8 text-posabit-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-semibold text-gray-900">Products Extracted</h1>
     <p class="text-gray-600 mt-1">
-      Flattened <strong><%= filename %></strong> &mdash;
-      <strong><%= rows.size %></strong> products across
-      <strong><%= stats.size %></strong> categories
+      Found <strong><%= rows.size %></strong> products across
+      <strong><%= stats.size %></strong> categories in <strong><%= filename %></strong>
     </p>
   </div>
-  <div class="flex gap-3">
-    <a href="/" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
-      Start Over
-    </a>
-    <a href="/export/<%= id %>" class="px-4 py-2 text-sm text-white bg-posabit-green rounded-md hover:bg-posabit-green-dark">
-      Download CSV
+
+  <!-- Stats cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <% stats.each do |sheet, counts| %>
+      <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+        <div class="text-2xl font-semibold text-posabit-dark"><%= counts["kept"] %></div>
+        <div class="text-sm text-gray-500 mt-1"><%= sheet %></div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Download flattened CSV -->
+  <div class="flex justify-center">
+    <a href="/export/<%= id %>"
+       class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-posabit-green border border-posabit-green rounded-lg hover:bg-green-50 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      Download Flattened CSV
     </a>
   </div>
-</div>
 
-<!-- Stats cards -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-  <% stats.each do |sheet, counts| %>
-    <div class="bg-white rounded-lg border border-gray-200 p-4">
-      <div class="text-sm text-gray-500"><%= sheet %></div>
-      <div class="text-2xl font-semibold text-posabit-dark mt-1"><%= counts["kept"] %></div>
-      <div class="text-xs text-gray-400"><%= counts["total"] %> rows scanned</div>
+  <!-- Divider -->
+  <div class="relative">
+    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+    <div class="relative flex justify-center">
+      <span class="bg-gray-50 px-4 text-sm text-gray-400">Step 2</span>
+    </div>
+  </div>
+
+  <% if has_posabit %>
+    <!-- POSaBIT catalog loaded -->
+    <% posabit_rows = @pipeline["posabit_rows"] %>
+    <% posabit_brands = posabit_rows.map { |r| r["brand_name"] }.compact.uniq %>
+    <% posabit_types = posabit_rows.map { |r| r["product_type_name"] }.compact.uniq %>
+
+    <div class="bg-white rounded-lg border border-gray-200 p-8">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h2 class="text-lg font-semibold text-gray-900">POSaBIT Catalog Loaded</h2>
+        <p class="text-gray-600 text-sm mt-1">
+          <strong><%= posabit_rows.size %></strong> products &middot;
+          <strong><%= posabit_brands.size %></strong> brands &middot;
+          <strong><%= posabit_types.size %></strong> product types
+        </p>
+        <p class="text-xs text-gray-400 mt-1"><%= @pipeline["posabit_filename"] %></p>
+      </div>
+
+      <!-- Download context file -->
+      <a href="/context/<%= id %>"
+         class="w-full inline-flex items-center justify-center gap-2 px-8 py-3 text-base font-medium text-white bg-posabit-green rounded-lg hover:bg-posabit-green-dark transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        Download Context File
+      </a>
+
+      <div class="mt-6 bg-gray-50 rounded-lg p-4">
+        <p class="text-sm font-medium text-gray-700 mb-2">How to use the context file:</p>
+        <ol class="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+          <li>Open ChatGPT, Claude, Gemini, or any AI assistant</li>
+          <li>Upload or paste the <strong>context file</strong> into the chat</li>
+          <li>Then paste rows from your <strong>flattened CSV</strong> and ask it to match them</li>
+          <li>The AI will tell you which products are new and which are updates</li>
+        </ol>
+      </div>
+    </div>
+
+  <% else %>
+    <!-- Upload POSaBIT catalog -->
+    <div class="bg-white rounded-lg border border-gray-200 p-8">
+      <h2 class="text-lg font-semibold text-gray-900 mb-2">Match Against Your POSaBIT Catalog</h2>
+      <p class="text-gray-600 text-sm mb-6">
+        Upload your current product export from POSaBIT to generate a context file for AI-powered matching.
+      </p>
+
+      <form action="/upload-posabit/<%= id %>" method="post" enctype="multipart/form-data" id="posabit-form">
+        <div class="mb-4">
+          <div id="posabit-drop-zone"
+               class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-posabit-green hover:bg-green-50 transition-colors">
+            <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-gray-600 text-sm" id="posabit-file-label">Drop your POSaBIT CSV here, or click to browse</p>
+            <p class="text-xs text-gray-400 mt-1">CSV file exported from POSaBIT</p>
+            <input type="file" name="posabit_file" required id="posabit-file-input" accept=".csv" class="hidden">
+          </div>
+        </div>
+
+        <button type="submit" id="posabit-submit-btn"
+                class="w-full bg-posabit-green text-white rounded-md px-4 py-3 font-medium hover:bg-posabit-green-dark transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+          Upload & Generate Context
+        </button>
+      </form>
     </div>
   <% end %>
-</div>
 
-<!-- Data columns -->
-<% data_columns = columns.reject { |c| c.start_with?("_") } %>
-<% synthetic_columns = columns.select { |c| c.start_with?("_") } %>
-
-<!-- Data table -->
-<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-  <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-sm font-medium text-gray-700">
-      Showing first <%= [rows.size, 50].min %> of <%= rows.size %> rows
-      &middot; <%= columns.size %> columns
-    </h2>
-    <div class="flex gap-2">
-      <button id="toggle-synthetic" class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">
-        Show metadata columns
-      </button>
-    </div>
-  </div>
-
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
-      <thead class="bg-posabit-dark">
-        <tr>
-          <th class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">#</th>
-          <% synthetic_columns.each do |col| %>
-            <th class="px-3 py-2 text-left text-xs font-medium text-posabit-teal uppercase tracking-wider synthetic-col hidden whitespace-nowrap"><%= col %></th>
-          <% end %>
-          <% data_columns.each do |col| %>
-            <th class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap"><%= col %></th>
-          <% end %>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        <% rows.first(50).each_with_index do |row, i| %>
-          <tr class="hover:bg-gray-50">
-            <td class="px-3 py-2 text-gray-400 text-xs"><%= i + 1 %></td>
-            <% synthetic_columns.each do |col| %>
-              <td class="px-3 py-2 text-posabit-teal text-xs synthetic-col hidden whitespace-nowrap"><%= row[col] %></td>
-            <% end %>
-            <% data_columns.each do |col| %>
-              <% val = row[col] %>
-              <td class="px-3 py-2 text-gray-700 max-w-xs truncate" title="<%= val %>"><%= val %></td>
-            <% end %>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+  <!-- Start over link -->
+  <div class="text-center">
+    <a href="/" class="text-sm text-gray-500 hover:text-gray-700">Start over with a new file</a>
   </div>
 </div>
 
 <script>
-  document.getElementById('toggle-synthetic').addEventListener('click', function() {
-    const cols = document.querySelectorAll('.synthetic-col');
-    const showing = cols[0]?.classList.contains('hidden');
-    cols.forEach(c => c.classList.toggle('hidden'));
-    this.textContent = showing ? 'Hide metadata columns' : 'Show metadata columns';
-  });
+  // POSaBIT file upload drag-and-drop
+  const pDropZone = document.getElementById('posabit-drop-zone');
+  const pFileInput = document.getElementById('posabit-file-input');
+  const pFileLabel = document.getElementById('posabit-file-label');
+  const pForm = document.getElementById('posabit-form');
+  const pSubmitBtn = document.getElementById('posabit-submit-btn');
+
+  if (pDropZone) {
+    pDropZone.addEventListener('click', () => pFileInput.click());
+    pDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      pDropZone.classList.add('border-posabit-green', 'bg-green-50');
+    });
+    pDropZone.addEventListener('dragleave', () => {
+      pDropZone.classList.remove('border-posabit-green', 'bg-green-50');
+    });
+    pDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      pDropZone.classList.remove('border-posabit-green', 'bg-green-50');
+      if (e.dataTransfer.files.length) {
+        pFileInput.files = e.dataTransfer.files;
+        pFileLabel.textContent = e.dataTransfer.files[0].name;
+      }
+    });
+    pFileInput.addEventListener('change', () => {
+      if (pFileInput.files.length) pFileLabel.textContent = pFileInput.files[0].name;
+    });
+    pForm.addEventListener('submit', () => {
+      pSubmitBtn.disabled = true;
+      pSubmitBtn.textContent = 'Processing...';
+    });
+  }
 </script>

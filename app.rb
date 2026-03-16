@@ -4,15 +4,22 @@ require "securerandom"
 require "json"
 require "csv"
 require_relative "lib/vendor_bridge/adapters/iheartjane_v1"
+require_relative "lib/vendor_bridge/adapters/context_builder"
 
 module VendorBridge
   class App < Sinatra::Base
     set :views, File.join(__dir__, "views")
     set :public_folder, File.join(__dir__, "public")
     set :tmp_dir, File.join(__dir__, "tmp")
+    set :show_exceptions, false
 
     enable :sessions
     set :session_secret, ENV.fetch("SESSION_SECRET") { SecureRandom.hex(32) }
+
+    error 400..599 do
+      @error_message = body.is_a?(Array) ? body.first : body.to_s
+      erb :error
+    end
 
     helpers do
       def session_dir
@@ -49,24 +56,38 @@ module VendorBridge
       halt 400, "No file uploaded" unless file
       halt 400, "No source selected" unless source
 
+      ext = File.extname(file[:filename]).downcase
+      unless %w[.xlsx .csv .json].include?(ext)
+        halt 400, "Unsupported file type: #{ext}. Please upload an XLSX, CSV, or JSON file."
+      end
+
       id = SecureRandom.hex(8)
-      ext = File.extname(file[:filename])
       upload_path = File.join(uploads_dir, "#{id}#{ext}")
       File.write(upload_path, file[:tempfile].read, mode: "wb")
 
       adapter_class = Adapters::Registry.fetch(source)
       adapter = adapter_class.new
-      result = adapter.flatten(upload_path)
+
+      begin
+        result = adapter.flatten(upload_path)
+      rescue ArgumentError => e
+        halt 400, e.message
+      rescue StandardError => e
+        halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from iHeartJane, not a CSV or other format."
+      end
 
       pipeline = {
         "id" => id,
         "step" => "preview",
         "source" => source,
+        "source_label" => adapter.source_label,
         "filename" => file[:filename],
         "upload_path" => upload_path,
         "rows" => result[:rows],
         "columns" => result[:columns],
         "stats" => result[:stats],
+        "category_mapping" => adapter.category_mapping,
+        "field_mapping" => adapter.field_mapping.map { |m| m.transform_keys(&:to_s) },
       }
       save_pipeline(pipeline)
 
@@ -95,6 +116,42 @@ module VendorBridge
         csv << columns
         rows.each { |row| csv << columns.map { |c| row[c] } }
       end
+    end
+
+    # -- Upload POSaBIT ingest-ready CSV --
+    post "/upload-posabit/:id" do
+      pipeline = load_pipeline(params[:id])
+      halt 404, "Session not found" unless pipeline
+
+      file = params[:posabit_file]
+      halt 400, "No file uploaded" unless file
+
+      raw = file[:tempfile].read
+      # Handle BOM from Excel exports and Windows encodings
+      raw = raw.b.sub(/\A\xEF\xBB\xBF/, "").force_encoding("UTF-8")
+      raw = raw.encode("UTF-8", "Windows-1252", invalid: :replace, undef: :replace) unless raw.valid_encoding?
+      parsed = CSV.parse(raw, headers: true)
+
+      pipeline["posabit_rows"] = parsed.map(&:to_h)
+      pipeline["posabit_columns"] = parsed.headers
+      pipeline["posabit_filename"] = file[:filename]
+      save_pipeline(pipeline)
+
+      redirect "/preview/#{params[:id]}"
+    end
+
+    # -- Download context file --
+    get "/context/:id" do
+      pipeline = load_pipeline(params[:id])
+      halt 404, "Session not found" unless pipeline
+      halt 400, "POSaBIT catalog not uploaded yet" unless pipeline["posabit_rows"]
+
+      builder = Adapters::ContextBuilder.new(pipeline)
+      content = builder.generate
+
+      content_type "text/markdown; charset=utf-8"
+      attachment "reconciliation_context.md"
+      content
     end
   end
 end

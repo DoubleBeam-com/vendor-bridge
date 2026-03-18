@@ -141,7 +141,7 @@ Still stuck? Open an issue at [github.com/DoubleBeam-com/vendor-bridge/issues](h
 
 ## For Developers & AI Assistants
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full project architecture, adapter interface, and how to add new sources.
+See [docs/architecture.md](docs/architecture.md) for full project architecture, the rosetta stone config, and how to add new sources.
 
 ---
 

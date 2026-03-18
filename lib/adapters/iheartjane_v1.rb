@@ -1,11 +1,10 @@
 require "roo"
-require_relative "base"
 require_relative "registry"
 require_relative "../transforms/row_filter"
 
 module VendorBridge
   module Adapters
-    class IheartjaneV1 < Base
+    class IheartjaneV1
       SKIP_SHEETS = ["Intructions", "Product Card"].freeze
 
       CATEGORY_MAP = {
@@ -18,38 +17,6 @@ module VendorBridge
         "Gear"                  => "Gear",
         "Merch."                => "Merchandise",
       }.freeze
-
-      def source_label
-        "iHeartJane"
-      end
-
-      def category_mapping
-        {
-          "Flower"      => "Flower",
-          "Preroll"     => "Preroll",
-          "Edible"      => "Edible Solid, Edible Liquid",
-          "Concentrate" => "Concentrate, BHO",
-          "Vape"        => "Cartridge",
-          "Topical"     => "Topical",
-          "Gear"        => "(no direct match — likely NEW)",
-          "Merchandise" => "(no direct match — likely NEW)",
-        }
-      end
-
-      def field_mapping
-        [
-          { vendor: "Brand",             posabit: "brand_name",  notes: "Also used for matching" },
-          { vendor: "Strain",            posabit: "strain_name", notes: "Also used for matching" },
-          { vendor: "_product_category", posabit: "product_type_name", notes: "Use the category mapping above" },
-          { vendor: "Product Name",      posabit: "name, display_name", notes: "Use for both fields" },
-          { vendor: "Product Description", posabit: "description", notes: "" },
-          { vendor: "Product Type",      posabit: "flower_type", notes: "Values like hybrid, indica, sativa" },
-          { vendor: "Pack Size",         posabit: "pack_size",   notes: "If available" },
-          { vendor: "Amount [g]",        posabit: "weight",      notes: "Also check Total Weight: Amount x Pack Size" },
-          { vendor: "IMAGE LINK ONLY...", posabit: "image_url", notes: "Only if value starts with http" },
-          { vendor: "Dosage (mg)",       posabit: "—",           notes: "Include if a matching column exists" },
-        ]
-      end
 
       def flatten(file_path)
         unless File.extname(file_path).downcase == ".xlsx"
@@ -142,6 +109,6 @@ module VendorBridge
       end
     end
 
-    Registry.register("iheartjane", IheartjaneV1)
+    Registry.register_adapter("iheartjane_v1", IheartjaneV1)
   end
 end

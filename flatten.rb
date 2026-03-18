@@ -18,10 +18,10 @@ abort "File not found: #{input}" unless File.exist?(input)
 
 output ||= input.sub(/\.[^.]+$/, "_flattened.csv")
 
-adapter_class = VendorBridge::Adapters::Registry.fetch(source)
-adapter = adapter_class.new
+source_config = VendorBridge::Adapters::Registry.fetch(source)
+adapter = VendorBridge::Adapters::Registry.adapter_for(source)
 
-puts "Flattening #{input} with adapter '#{source}'..."
+puts "Flattening #{input} with #{source_config["label"]}..."
 result = adapter.flatten(input)
 
 rows = result[:rows]

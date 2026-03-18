@@ -56,9 +56,10 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 
 ### Decision
 
-- **Match found** → **UPDATE**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.).
-- **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → UPDATE. If no → **NEW**.
-- **No match** → **NEW**. Append at the bottom. Leave `id` and all `_id` fields blank. Fill in what you can from the vendor data.
+- **Match found** → **UPDATE**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.). Set `_action` to `UPDATE`.
+- **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → UPDATE. If no → **INSERT**.
+- **No match** → **INSERT**. Append at the bottom. Leave `id` blank. For `_id` fields, resolve from lookup tables (see ID Resolution below); leave blank only if no match found. Fill in what you can from the vendor data. Set `_action` to `INSERT`.
+- **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is. Set `_action` to `UNCHANGED`.
 
 ### Important
 
@@ -68,17 +69,21 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 
 ---
 
+#{id_resolution_text}
+---
+
 ## Output: `reconciliation_output.csv`
 
 Save to: **`data_files/reconciliation_output.csv`**
 
-#{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n#{posabit_cols.join(",")}\n```\n"}
+#{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n_action,#{posabit_cols.join(",")}\n```\n"}
 ### Rules
 
-- The file must use the **exact same columns** as `posabit_data.csv`, in the **exact same order**
-- **UPDATE rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data
-- **NEW rows**: Append at the bottom. `id` is blank. All `_id` fields are blank
-- Do not add or remove columns
+- Add `_action` as the **first column** in the output. Values: `UPDATE`, `INSERT`, or `UNCHANGED`
+- After `_action`, use the **exact same columns** as `posabit_data.csv`, in the **exact same order**
+- **UNCHANGED rows**: Existing products with no modifications. Set `_action` to `UNCHANGED`
+- **UPDATE rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data. Set `_action` to `UPDATE`
+- **INSERT rows**: Append at the bottom. `id` is blank. Resolve `_id` fields from lookup tables (see ID Resolution); leave blank only if no match. Set `_action` to `INSERT`
 - Do not remove any existing rows from `posabit_data.csv` — every original row must be in the output
 
 #{field_mapping_text(field_map)}
@@ -92,9 +97,9 @@ Save to: **`data_files/reconciliation_summary.md`**
 After completing the reconciliation, create a summary with:
 
 - **Total products** in the output file
-- **Unchanged** — existing products with no modifications
-- **Updated** — existing products where fields were changed (list what changed per product)
-- **New** — products not found in the catalog (list each one)
+- **UNCHANGED** — existing products with no modifications
+- **UPDATE** — existing products where fields were changed (list what changed per product)
+- **INSERT** — products not found in the catalog (list each one)
 - **Flagged** — ambiguous matches or duplicates that need manual review
 
 This summary helps the vendor understand the blast radius of the import before uploading.
@@ -121,6 +126,34 @@ This summary helps the vendor understand the blast radius of the import before u
       def category_mapping_text(mapping)
         return "   *(No category mapping defined for this source)*" if mapping.empty?
         mapping.map { |vendor, posabit| "   - `#{vendor}` → `#{posabit}`" }.join("\n")
+      end
+
+      def id_resolution_text
+        <<~SECTION
+## ID Resolution
+
+As you process each row (UPDATE or NEW), resolve `_id` fields from the existing catalog:
+
+**Step 1 — Build lookup tables** from `posabit_data.csv` before you start processing rows. Extract every unique name → id pair:
+
+| Name Column | ID Column |
+|---|---|
+| `brand_name` | `brand_id` |
+| `strain_name` | `strain_id` |
+| `product_type_name` | `product_type_id` |
+| `product_family_name` | `product_family_id` |
+
+Skip blank names or blank IDs when building lookups. If the same name appears with different IDs, keep the most common one.
+
+**Step 2 — Resolve IDs inline** as you write each output row:
+
+- If a `_name` field has a value but the corresponding `_id` is empty, look up the name in the table
+- Use **case-insensitive exact match first**, then **fuzzy match** (minor spelling differences, extra spaces, abbreviations)
+- If you find a confident match → populate the `_id`
+- If no confident match → leave the `_id` blank (do not guess)
+
+This applies to **both UPDATE and NEW rows**. Some existing catalog rows may have a name but a missing ID — fix those too.
+        SECTION
       end
 
       def field_mapping_text(mapping)

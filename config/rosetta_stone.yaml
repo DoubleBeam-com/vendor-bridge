@@ -1,0 +1,74 @@
+# ── Source metadata ──────────────────────────────────
+sources:
+  iheartjane:
+    label: iHeartJane
+    adapter: iheartjane_v1
+    category_mapping:
+      Flower: Flower
+      Preroll: Preroll
+      Edible: "Edible Solid, Edible Liquid"
+      Concentrate: "Concentrate, BHO"
+      Vape: Cartridge
+      Topical: Topical
+      Gear: "(no direct match — likely NEW)"
+      Merchandise: "(no direct match — likely NEW)"
+
+  # cultivera:
+  #   label: Cultivera
+  #   adapter: generic_csv
+  #   category_mapping:
+  #     flower: Flower
+
+# ── Field rosetta stone (keyed by POSaBIT field) ────
+field_mappings:
+  brand_name:
+    iheartjane: Brand
+    # cultivera: brand
+    notes: Also used for matching
+
+  strain_name:
+    iheartjane: Strain
+    # cultivera: strain_name
+    notes: Also used for matching
+
+  product_type_name:
+    iheartjane: _product_category
+    # cultivera: category
+    notes: Use the category mapping above
+
+  name:
+    iheartjane: Product Name
+    # cultivera: product_name
+    notes: Use for name and display_name
+
+  display_name:
+    iheartjane: Product Name
+    # cultivera: display_name
+
+  description:
+    iheartjane: Product Description
+    # cultivera: description
+
+  flower_type:
+    iheartjane: Product Type
+    # cultivera: flower_type
+    notes: "Values like hybrid, indica, sativa"
+
+  pack_size:
+    iheartjane: Pack Size
+    # cultivera: pack_size
+
+  weight:
+    iheartjane: "Amount [g]"
+    # cultivera: weight_grams
+    notes: "Also check Total Weight: Amount x Pack Size"
+
+  image_url:
+    iheartjane: "IMAGE LINK ONLY..."
+    # cultivera: image_url
+    notes: Only if value starts with http
+
+  dosage:
+    iheartjane: "Dosage (mg)"
+    # cultivera: thc_mg
+    notes: Include if a matching column exists

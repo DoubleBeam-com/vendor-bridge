@@ -78,29 +78,29 @@ module VendorBridge
       file_bytes = file[:tempfile].read
       File.write(upload_path, file_bytes, mode: "wb")
 
-      adapter_class = Adapters::Registry.fetch(source)
-      adapter = adapter_class.new
+      source_config = Adapters::Registry.fetch(source)
+      adapter = Adapters::Registry.adapter_for(source)
 
       begin
         result = adapter.flatten(upload_path)
       rescue ArgumentError => e
         halt 400, e.message
       rescue StandardError => e
-        halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from #{adapter.source_label}, not a CSV or other format."
+        halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from #{source_config["label"]}, not a CSV or other format."
       end
 
       pipeline = {
         "id" => id,
         "step" => "preview",
         "source" => source,
-        "source_label" => adapter.source_label,
+        "source_label" => source_config["label"],
         "filename" => file[:filename],
         "upload_path" => upload_path,
         "rows" => result[:rows],
         "columns" => result[:columns],
         "stats" => result[:stats],
-        "category_mapping" => adapter.category_mapping,
-        "field_mapping" => adapter.field_mapping.map { |m| m.transform_keys(&:to_s) },
+        "category_mapping" => source_config["category_mapping"],
+        "field_mapping" => source_config["field_mapping"],
       }
       save_pipeline(pipeline)
 

@@ -44,10 +44,14 @@ config.ru                       Rack config (loads app.rb)
 flatten.rb                      CLI alternative to the web UI
                                 Usage: ruby flatten.rb [--source NAME] [--output PATH] INPUT_FILE
 
+config/
+  rosetta_stone.yaml            Single source of truth for all field & category mappings
+                                Two sections: sources (per-source metadata) and
+                                field_mappings (POSaBIT field → vendor column dictionary)
+
 lib/adapters/
-  base.rb                       Abstract adapter interface (see Adapter Interface below)
-  registry.rb                   In-memory adapter registry (register/fetch/available)
-  iheartjane_v1.rb              iHeartJane XLSX parser — registered as "iheartjane"
+  registry.rb                   Loads rosetta_stone.yaml, provides fetch/adapter_for/available
+  iheartjane_v1.rb              iHeartJane XLSX parser (flatten only, no mapping config)
   context_builder.rb            Generates the LLM reconciliation .md file
 
 lib/transforms/
@@ -65,9 +69,39 @@ spec/                           RSpec tests
 samples/                        Test fixtures (gitignored — contains vendor data)
 ```
 
+## Rosetta Stone (`config/rosetta_stone.yaml`)
+
+All field and category mappings live in a single YAML file. It has two sections:
+
+### `sources` — per-source metadata
+
+Each source (iheartjane, cultivera, etc.) defines:
+- `label` — human-readable name for UI and error messages
+- `adapter` — which Ruby flatten class to instantiate (e.g. `iheartjane_v1`)
+- `category_mapping` — maps vendor product categories to POSaBIT `product_type_name` values
+
+### `field_mappings` — the dictionary
+
+Keyed by **POSaBIT field name**. Each entry lists the vendor column name per source:
+
+```yaml
+field_mappings:
+  brand_name:
+    iheartjane: Brand
+    cultivera: brand
+    notes: Also used for matching
+
+  strain_name:
+    iheartjane: Strain
+    cultivera: strain_name
+    notes: Also used for matching
+```
+
+The registry reads this file and derives the per-source `[{vendor, posabit, notes}]` array that the context builder renders into the reconciliation file.
+
 ## Adapter Interface
 
-Every source system (iHeartJane, Dutchie, Leafly, etc.) gets its own adapter in `lib/adapters/`. An adapter extends `VendorBridge::Adapters::Base` and implements:
+Adapters are standalone Ruby classes in `lib/adapters/`. They have one job: parse a source file and return flat product data. All mapping config lives in `rosetta_stone.yaml`, not in the adapter.
 
 ### `flatten(file_path) → Hash`
 
@@ -98,123 +132,91 @@ Parse the source file and return:
 }
 ```
 
-### `source_label → String`
-
-Human-readable name for UI and error messages. Example: `"iHeartJane"`
-
-### `category_mapping → Hash`
-
-Maps vendor product categories to POSaBIT `product_type_name` values:
-
-```ruby
-{
-  "Flower"      => "Flower",
-  "Edible"      => "Edible Solid, Edible Liquid",
-  "Vape"        => "Cartridge",
-  "Concentrate" => "Concentrate, BHO",
-  ...
-}
-```
-
-### `field_mapping → Array<Hash>`
-
-Maps vendor columns to POSaBIT columns. Used by the context builder to generate the field guide:
-
-```ruby
-[
-  { vendor: "Brand",    posabit: "brand_name",  notes: "Also used for matching" },
-  { vendor: "Strain",   posabit: "strain_name", notes: "Also used for matching" },
-  { vendor: "Amount [g]", posabit: "weight",    notes: "Check Total Weight too" },
-  ...
-]
-```
-
 ### Registration
 
-At the bottom of each adapter file:
+At the bottom of each adapter file, register the class with its key from `rosetta_stone.yaml`:
 
 ```ruby
-Registry.register("iheartjane", IheartjaneV1)
+Registry.register_adapter("iheartjane_v1", IheartjaneV1)
 ```
 
-Adapters are auto-loaded via glob — drop a new file in `lib/adapters/` and it's available immediately.
+Adapter files are auto-loaded via glob in `app.rb`. The registry matches the `adapter` key from the YAML to the registered class.
 
 ## Context File Format
 
 The context builder (`lib/adapters/context_builder.rb`) generates a Markdown file designed to be loaded into any LLM. It contains:
 
-1. **Role prompt** — "You are a product data reconciliation assistant"
+1. **File references** — Points the LLM to the data files it needs
 2. **Matching rules** — Search by category → brand (fuzzy) → strain (fuzzy) → weight
-3. **Category mapping** — Vendor categories → POSaBIT product types (from adapter)
-4. **Field mapping** — Vendor columns → POSaBIT columns (from adapter)
-5. **Output format** — Exact POSaBIT CSV columns in exact order
-6. **UPDATE vs NEW rules**:
+3. **Category mapping** — Vendor categories → POSaBIT product types (from rosetta stone)
+4. **Field mapping** — Vendor columns → POSaBIT columns (derived from rosetta stone)
+5. **ID resolution** — Instructions to build lookup tables from the catalog and populate `_id` fields by fuzzy-matching `_name` fields
+6. **Output format** — Exact POSaBIT CSV columns in exact order
+7. **UPDATE vs NEW rules**:
    - Match found → UPDATE: keep `id` and all `_id` fields from catalog
-   - No match → NEW: leave `id` blank, leave `_id` fields blank
-7. **Full POSaBIT catalog** — Embedded as CSV (typically ~900 rows, fits in context)
-8. **Vendor data summary** — Column list, brand list, category list
+   - No match → NEW: leave `id` blank, resolve `_id` fields from lookup tables
 
-The context file is source-agnostic — all source-specific details come from the adapter's `category_mapping` and `field_mapping`.
+The context file is source-agnostic — all source-specific details come from `rosetta_stone.yaml`.
 
 ## Web App Flow (app.rb)
 
 1. `GET /` — Renders upload form. Source dropdown populated from `Registry.available`.
-2. `POST /upload` — Saves file, runs `adapter.flatten()`, stores result as pipeline JSON in `tmp/sessions/`.
+2. `POST /upload` — Saves file, loads source config from registry, runs `adapter.flatten()`, stores result as pipeline JSON in `tmp/sessions/`.
 3. `GET /preview/:id` — Shows stats cards. If POSaBIT catalog is loaded, shows context download button.
 4. `GET /export/:id` — Downloads flattened CSV.
-5. `POST /upload-posabit/:id` — Parses uploaded POSaBIT CSV, stores in pipeline, redirects to preview.
-6. `GET /context/:id` — Generates and downloads the reconciliation .md file.
+5. `POST /upload-posabit/:id` — Parses uploaded POSaBIT CSV, stores in pipeline, auto-generates context file, redirects to preview.
+6. `GET /context/:id` — Downloads the reconciliation .md file.
 
 Pipeline state is stored as JSON files in `tmp/sessions/`. Each session has a unique hex ID.
 
 ## Adding a New Source
 
-1. Create `lib/adapters/newsource_v1.rb`:
+### 1. Add mappings to `config/rosetta_stone.yaml`
+
+Under `sources`, add the new source with its label, adapter, and category mapping. Under `field_mappings`, add the vendor column name for each POSaBIT field:
+
+```yaml
+sources:
+  cultivera:
+    label: Cultivera
+    adapter: generic_csv       # or a custom adapter if the file format needs special parsing
+    category_mapping:
+      flower: Flower
+      edible: "Edible Solid, Edible Liquid"
+
+field_mappings:
+  brand_name:
+    iheartjane: Brand
+    cultivera: brand           # ← add a line per source
+```
+
+### 2. Create an adapter (only if the file format needs special parsing)
+
+If the source uses a standard CSV, you may be able to reuse a generic adapter. If it needs custom parsing (e.g. multi-sheet XLSX like iHeartJane), create `lib/adapters/cultivera_v1.rb`:
 
 ```ruby
-require "csv"  # or whatever parser you need
-require_relative "base"
 require_relative "registry"
 
 module VendorBridge
   module Adapters
-    class NewSourceV1 < Base
-      def source_label
-        "New Source"
-      end
-
-      def category_mapping
-        {
-          "Flower" => "Flower",
-          # ... map vendor categories to POSaBIT product types
-        }
-      end
-
-      def field_mapping
-        [
-          { vendor: "product_name", posabit: "name", notes: "" },
-          { vendor: "brand",        posabit: "brand_name", notes: "Used for matching" },
-          # ...
-        ]
-      end
-
+    class CultiveraV1
       def flatten(file_path)
         # Parse the file, filter junk rows, return { rows:, columns:, stats: }
       end
     end
 
-    Registry.register("newsource", NewSourceV1)
+    Registry.register_adapter("cultivera_v1", CultiveraV1)
   end
 end
 ```
 
-2. That's it. The glob loader picks it up. The web UI shows it in the dropdown. The context builder uses its mappings.
+That's it. The glob loader picks it up. The web UI shows it in the dropdown. The context builder uses the rosetta stone mappings automatically.
 
 ## Known Debt
 
-- **RowFilter is iHeartJane-specific**: `lib/transforms/row_filter.rb` has hardcoded column names like `"Strain"`, `"Brand"`, `"Product Name (Internal Use)"`. New sources with different column names need their own filter logic. Should be moved into each adapter.
+- **RowFilter is iHeartJane-specific**: `lib/transforms/row_filter.rb` has hardcoded column names like `"Strain"`, `"Brand"`, `"Product Name (Internal Use)"`. New sources with different column names need their own filter logic. Should be moved into each adapter or made configurable.
 - **Tests only cover iHeartJane**: `spec/app_spec.rb` uses iHeartJane fixtures. New sources need their own test files and sample data.
-- **No automated matching**: The reconciliation step is manual (vendor pastes into LLM). Future: could run matching server-side.
+- **No automated matching**: The reconciliation step is manual (vendor loads context into LLM). Future: could run matching server-side.
 
 ## Tech Stack
 

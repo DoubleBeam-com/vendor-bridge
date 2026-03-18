@@ -1,0 +1,62 @@
+<% id = @pipeline["id"] %>
+<% totals = { "none" => 0, "update" => 0, "insert" => 0 } %>
+<% @summary.each_value { |counts| counts.each { |k, v| totals[k] = (totals[k] || 0) + v } } %>
+<% grand_total = totals.values.sum %>
+
+<div class="max-w-2xl mx-auto space-y-8">
+
+  <div class="text-center">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+      <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-semibold text-gray-900">Reconciliation Summary</h1>
+    <p class="text-gray-600 mt-1">
+      <strong><%= grand_total %></strong> total products &middot;
+      <span class="text-gray-500"><%= totals["none"] %> unchanged</span> &middot;
+      <span class="text-yellow-600"><%= totals["update"] %> updated</span> &middot;
+      <span class="text-green-600"><%= totals["insert"] %> inserted</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-200">
+          <th class="text-left px-4 py-3 font-medium text-gray-700">Product Type</th>
+          <th class="text-right px-4 py-3 font-medium text-gray-500">No Change</th>
+          <th class="text-right px-4 py-3 font-medium text-yellow-600">Updated</th>
+          <th class="text-right px-4 py-3 font-medium text-green-600">Inserted</th>
+          <th class="text-right px-4 py-3 font-medium text-gray-700">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <% @summary.sort_by { |type, _| type }.each do |type, counts| %>
+          <% row_total = counts.values.sum %>
+          <tr>
+            <td class="px-4 py-3 font-medium text-gray-900"><%= type %></td>
+            <td class="px-4 py-3 text-right text-gray-500"><%= counts["none"] %></td>
+            <td class="px-4 py-3 text-right text-yellow-600"><%= counts["update"] > 0 ? counts["update"] : "&mdash;" %></td>
+            <td class="px-4 py-3 text-right text-green-600"><%= counts["insert"] > 0 ? counts["insert"] : "&mdash;" %></td>
+            <td class="px-4 py-3 text-right font-medium text-gray-900"><%= row_total %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr class="bg-gray-50 border-t border-gray-200 font-medium">
+          <td class="px-4 py-3 text-gray-700">Total</td>
+          <td class="px-4 py-3 text-right text-gray-500"><%= totals["none"] %></td>
+          <td class="px-4 py-3 text-right text-yellow-600"><%= totals["update"] %></td>
+          <td class="px-4 py-3 text-right text-green-600"><%= totals["insert"] %></td>
+          <td class="px-4 py-3 text-right text-gray-900"><%= grand_total %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="flex justify-center gap-4">
+    <a href="/preview/<%= id %>" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back</a>
+    <a href="/" class="text-sm text-gray-500 hover:text-gray-700">Start over</a>
+  </div>
+</div>

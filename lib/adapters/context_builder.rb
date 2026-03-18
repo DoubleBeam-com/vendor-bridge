@@ -30,7 +30,6 @@ All files are in the **`data_files/`** folder:
 | `#{source}_flattened.csv` | Incoming vendor products from #{source_label} |
 | `posabit_data.csv` | Current POSaBIT catalog (this is your starting point) |
 | `reconciliation_output.csv` | **You will create this** — the final import-ready file |
-| `reconciliation_summary.md` | **You will create this** — summary of changes |
 
 ---
 
@@ -58,10 +57,10 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 #{matching_hints_text(match_hints)}
 ### Decision
 
-- **Match found** → **UPDATE**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.). Set `_action` to `UPDATE`.
-- **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → UPDATE. If no → **INSERT**.
-- **No match** → **INSERT**. Append at the bottom. Leave `id` blank. For `_id` fields, resolve from lookup tables (see ID Resolution below); leave blank only if no match found. Fill in what you can from the vendor data. Set `_action` to `INSERT`.
-- **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is. Set `_action` to `UNCHANGED`.
+- **Match found** → **update**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.). Set `row_action` to `update`.
+- **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → update. If no → **insert**.
+- **No match** → **insert**. Append at the bottom. Leave `id` blank. For `_id` fields, resolve from lookup tables (see ID Resolution below); leave blank only if no match found. Fill in what you can from the vendor data. Set `row_action` to `insert`.
+- **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is. Set `row_action` to `none`.
 
 ### Important
 
@@ -78,33 +77,17 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 
 Save to: **`data_files/reconciliation_output.csv`**
 
-#{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n_action,#{posabit_cols.join(",")}\n```\n"}
+#{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n#{posabit_cols.join(",")}\n```\n"}
 ### Rules
 
-- Add `_action` as the **first column** in the output. Values: `UPDATE`, `INSERT`, or `UNCHANGED`
-- After `_action`, use the **exact same columns** as `posabit_data.csv`, in the **exact same order**
-- **UNCHANGED rows**: Existing products with no modifications. Set `_action` to `UNCHANGED`
-- **UPDATE rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data. Set `_action` to `UPDATE`
-- **INSERT rows**: Append at the bottom. `id` is blank. Resolve `_id` fields from lookup tables (see ID Resolution); leave blank only if no match. Set `_action` to `INSERT`
+- The output uses the **exact same columns** as `posabit_data.csv`, in the **exact same order** (starting with `row_action`)
+- Set `row_action` to `none`, `update`, or `insert` for each row
+- **none rows**: Existing products with no modifications — keep as-is
+- **update rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data
+- **insert rows**: Append at the bottom. `id` is blank. Resolve `_id` fields from lookup tables (see ID Resolution); leave blank only if no match
 - Do not remove any existing rows from `posabit_data.csv` — every original row must be in the output
 
 #{field_mapping_text(field_map)}
-
----
-
-## Output: `reconciliation_summary.md`
-
-Save to: **`data_files/reconciliation_summary.md`**
-
-After completing the reconciliation, create a summary with:
-
-- **Total products** in the output file
-- **UNCHANGED** — existing products with no modifications
-- **UPDATE** — existing products where fields were changed (list what changed per product)
-- **INSERT** — products not found in the catalog (list each one)
-- **Flagged** — ambiguous matches or duplicates that need manual review
-
-This summary helps the vendor understand the blast radius of the import before uploading.
 
 ---
 
@@ -115,7 +98,6 @@ This summary helps the vendor understand the blast radius of the import before u
 3. For each vendor row, search the base for a match
 4. Build the output: base rows (with updates applied) + new rows appended at the bottom
 5. Save `data_files/reconciliation_output.csv`
-6. Save `data_files/reconciliation_summary.md`
 
 ---
 
@@ -134,7 +116,7 @@ This summary helps the vendor understand the blast radius of the import before u
         <<~SECTION
 ## ID Resolution
 
-As you process each row (UPDATE or NEW), resolve `_id` fields from the existing catalog:
+As you process each row (update or insert), resolve `_id` fields from the existing catalog:
 
 **Step 1 — Build lookup tables** from `posabit_data.csv` before you start processing rows. Extract every unique name → id pair:
 
@@ -154,7 +136,7 @@ Skip blank names or blank IDs when building lookups. If the same name appears wi
 - If you find a confident match → populate the `_id`
 - If no confident match → leave the `_id` blank (do not guess)
 
-This applies to **both UPDATE and NEW rows**. Some existing catalog rows may have a name but a missing ID — fix those too.
+This applies to **both update and insert rows**. Some existing catalog rows may have a name but a missing ID — fix those too.
         SECTION
       end
 

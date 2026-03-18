@@ -205,6 +205,30 @@ module VendorBridge
       redirect "/preview/#{params[:id]}"
     end
 
+    # -- Reconciliation summary --
+    get "/summary/:id" do
+      @pipeline = load_pipeline(params[:id])
+      halt 404, "Session not found" unless @pipeline
+
+      output_path = File.join(data_dir, "reconciliation_output.csv")
+      halt 400, "Reconciliation output not found. Run the AI reconciliation first." unless File.exist?(output_path)
+
+      raw = File.read(output_path)
+      raw = raw.b.sub(/\A\xEF\xBB\xBF/n, "").force_encoding("UTF-8")
+      raw = raw.encode("UTF-8", "Windows-1252", invalid: :replace, undef: :replace) unless raw.valid_encoding?
+      parsed = CSV.parse(raw, headers: true)
+
+      @summary = {}
+      parsed.each do |row|
+        type = row["product_type_name"] || "Unknown"
+        action = (row["row_action"] || "none").downcase
+        @summary[type] ||= { "none" => 0, "update" => 0, "insert" => 0 }
+        @summary[type][action] = (@summary[type][action] || 0) + 1
+      end
+
+      erb :summary
+    end
+
     # -- Download context file --
     get "/context/:id" do
       pipeline = load_pipeline(params[:id])

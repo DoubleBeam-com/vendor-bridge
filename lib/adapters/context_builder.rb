@@ -15,38 +15,37 @@ module VendorBridge
         <<~MD
 # POSaBIT Product Reconciliation
 
-> Upload this file to [Claude Cowork](https://cowork.claude.ai) or any AI assistant.
-> Then upload the two data files below and ask to reconcile them.
+> Open this file in [Claude Cowork](https://cowork.claude.ai) or any AI assistant.
+> All data files are in the same `data_files/` folder as this file.
 
 ---
 
-## Data Files
+## Files
 
-These files are in the `data_files/` folder:
+All files are in the **`data_files/`** folder:
 
-1. **`#{source}_flattened.csv`** — Incoming vendor products (from #{source_label})
-2. **`posabit_data.csv`** — Current POSaBIT catalog
-
-Upload both files to the conversation along with this context file.
+| File | Description |
+|---|---|
+| `#{source}_flattened.csv` | Incoming vendor products from #{source_label} |
+| `posabit_data.csv` | Current POSaBIT catalog (this is your starting point) |
+| `reconciliation_output.csv` | **You will create this** — the final import-ready file |
+| `reconciliation_summary.md` | **You will create this** — summary of changes |
 
 ---
 
-## Your Role
+## Your Job
 
-You are a product data reconciliation assistant. The user has uploaded two CSV files:
+Merge the vendor products into the POSaBIT catalog.
 
-- The **vendor file** (`#{source}_flattened.csv`) contains new/updated products from #{source_label}.
-- The **POSaBIT file** (`posabit_data.csv`) contains the store's current product catalog.
-
-For each row in the vendor file, determine whether it matches an existing product in the POSaBIT catalog (UPDATE) or is brand new (NEW).
+**Start from `posabit_data.csv` as the base.** Every existing row stays. You are only making changes where the vendor data is newer or better, and appending new products at the bottom.
 
 ---
 
 ## Matching Rules
 
-For each incoming vendor product, search the POSaBIT catalog using these fields **in order of priority**:
+For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match using these fields in order:
 
-1. **Product category** — Match the vendor's `_product_category` to the catalog's `product_type_name`:
+1. **Product category** — Match the vendor's `_product_category` to `product_type_name`:
 #{category_mapping_text(cat_mapping)}
 
 2. **Brand name** — Fuzzy match the vendor's `Brand` against `brand_name`. Ignore case and minor differences (e.g., "phat panda" = "Phat Panda").
@@ -57,45 +56,63 @@ For each incoming vendor product, search the POSaBIT catalog using these fields 
 
 ### Decision
 
-- **All 3 match** (+ weight if applicable) → **UPDATE**. Copy the matching catalog row. Keep `id` and all ID fields. Update only fields where the vendor has better/newer data.
-- **Category + Brand match but strain differs** → Check if catalog `name` contains the vendor's product name or strain. If yes → UPDATE. If no → **NEW**.
-- **No match on category + brand** → **NEW**. Leave `id` and all `_id` fields blank.
+- **Match found** → **UPDATE**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.).
+- **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → UPDATE. If no → **NEW**.
+- **No match** → **NEW**. Append at the bottom. Leave `id` and all `_id` fields blank. Fill in what you can from the vendor data.
 
 ### Important
 
 - Each catalog row should match **at most one** vendor row. Don't reuse matches.
 - If the vendor has duplicate rows (same brand + strain + category), flag them and ask the user.
+- When in doubt, do NOT update — flag the row for manual review instead.
 
 ---
 
-## Output Format
+## Output: `reconciliation_output.csv`
 
-**Your output must be a valid CSV using the exact same columns as `posabit_data.csv`, in the exact same order.**
+Save to: **`data_files/reconciliation_output.csv`**
 
-#{posabit_cols.empty? ? "" : "The output columns are:\n\n```\n#{posabit_cols.join(",")}\n```\n"}
+#{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n#{posabit_cols.join(",")}\n```\n"}
 ### Rules
 
-- **UPDATE rows**: Keep the `id` and all existing values from the matched catalog row. Only overwrite fields where the vendor row has better/newer data (description, image_url, etc.).
-- **NEW rows**: Leave `id` blank. Fill in what you can from the vendor data. Leave ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`) blank.
-- Output the CSV header row first, then one row per product.
-- Do not add or remove columns.
-
-### How to tell UPDATE from NEW
-
-| | `id` column | ID fields (`brand_id`, etc.) |
-|---|---|---|
-| **UPDATE** | Has a value (e.g., `458066`) | Copied from catalog |
-| **NEW** | Blank | Blank |
+- The file must use the **exact same columns** as `posabit_data.csv`, in the **exact same order**
+- **UPDATE rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data
+- **NEW rows**: Append at the bottom. `id` is blank. All `_id` fields are blank
+- Do not add or remove columns
+- Do not remove any existing rows from `posabit_data.csv` — every original row must be in the output
 
 #{field_mapping_text(field_map)}
+
+---
+
+## Output: `reconciliation_summary.md`
+
+Save to: **`data_files/reconciliation_summary.md`**
+
+After completing the reconciliation, create a summary with:
+
+- **Total products** in the output file
+- **Unchanged** — existing products with no modifications
+- **Updated** — existing products where fields were changed (list what changed per product)
+- **New** — products not found in the catalog (list each one)
+- **Flagged** — ambiguous matches or duplicates that need manual review
+
+This summary helps the vendor understand the blast radius of the import before uploading.
+
 ---
 
 ## Workflow
 
-1. Read both CSV files
-2. Process the vendor file in batches (50–100 rows at a time)
-3. For each batch, output the reconciled CSV rows
-4. After all batches, provide a summary: how many updates, how many new products, any duplicates or ambiguous matches
+1. Read `posabit_data.csv` — this is your base
+2. Read `#{source}_flattened.csv` — these are the incoming products
+3. For each vendor row, search the base for a match
+4. Build the output: base rows (with updates applied) + new rows appended at the bottom
+5. Save `data_files/reconciliation_output.csv`
+6. Save `data_files/reconciliation_summary.md`
+
+---
+
+**Please spot check the output before uploading the file to POSaBIT. This is very important.**
         MD
       end
 

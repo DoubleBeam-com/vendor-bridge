@@ -137,6 +137,40 @@ RSpec.describe VendorBridge::App do
     end
   end
 
+  describe "GET /export/:id" do
+    let(:pipeline_id) { "exporttest1" }
+    let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }
+
+    before do
+      FileUtils.mkdir_p(session_dir)
+      pipeline = {
+        "id" => pipeline_id,
+        "source" => "iheartjane",
+        "filename" => "test.xlsx",
+        "rows" => [
+          { "Brand" => "Phat Panda", "_product_category" => "Flower", "Strain" => "Alien OG" }
+        ],
+        "columns" => ["Brand", "_product_category", "Strain"],
+        "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
+      }
+      File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+    end
+
+    it "downloads a CSV file" do
+      get "/export/#{pipeline_id}"
+
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["Content-Type"]).to include("text/csv")
+      expect(last_response.headers["Content-Disposition"]).to include("test_flattened.csv")
+      expect(last_response.body).to include("Phat Panda")
+    end
+
+    it "returns 404 for unknown session" do
+      get "/export/nonexistent"
+      expect(last_response.status).to eq(404)
+    end
+  end
+
   describe "GET /context/:id" do
     let(:pipeline_id) { "ctxtest123" }
     let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }
@@ -218,9 +252,10 @@ RSpec.describe VendorBridge::App do
           "rows" => [{ "Brand" => "Test" }],
           "columns" => ["Brand"],
           "stats" => { "Flower" => { "total" => 1, "kept" => 1 } },
-          "posabit_rows" => [
-            { "id" => "1", "brand_name" => "Phat Panda", "product_type_name" => "Flower" }
-          ],
+          "has_posabit" => true,
+          "posabit_row_count" => 1,
+          "posabit_brands" => ["Phat Panda"],
+          "posabit_types" => ["Flower"],
           "posabit_columns" => ["id", "brand_name", "product_type_name"],
           "posabit_filename" => "export.csv",
         }

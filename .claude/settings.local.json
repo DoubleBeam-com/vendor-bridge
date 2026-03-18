@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(ruby -rcsv -e ':*)",
-      "Bash(bundle exec:*)"
+      "Bash(bundle exec:*)",
+      "Bash(python3:*)"
     ]
   }
 }

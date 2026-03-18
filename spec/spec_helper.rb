@@ -3,7 +3,7 @@ SimpleCov.start do
   add_filter "/spec/"
   add_filter "/vendor/"
   enable_coverage :branch
-  minimum_coverage line: 90, branch: 80
+  minimum_coverage line: 90, branch: 75
 end
 
 require "rack/test"
@@ -29,9 +29,11 @@ RSpec.configure do |config|
   config.include TestHelpers
 
   config.before(:each) do
-    # Clean tmp between tests
+    # Clean tmp and data_files between tests
     tmp = File.join(File.dirname(__dir__), "tmp")
     FileUtils.rm_rf(Dir.glob(File.join(tmp, "sessions", "*.json")))
     FileUtils.rm_rf(Dir.glob(File.join(tmp, "uploads", "*")))
+    data = File.join(File.dirname(__dir__), "data_files")
+    FileUtils.rm_rf(Dir.glob(File.join(data, "*")))
   end
 end

@@ -82,9 +82,13 @@ If you want the tool to help you figure out which products are new vs. updates:
 
 1. Upload your current POSaBIT product export (CSV) on the same page
 2. Click **Download Context File**
-3. Open [Claude Cowork](https://cowork.claude.ai) and upload the context file
-4. Paste rows from your flattened CSV in small batches
-5. Claude will output a ready-to-import CSV — rows with an `id` are updates, blank `id` means new
+3. Open [Claude Cowork](https://cowork.claude.ai)
+4. Open the **data_files** folder and attach the **context file** to the conversation
+5. Ask Claude to review and reconcile the data
+6. Claude will create two files in `data_files/`:
+   - **reconciliation_output.csv** — the import-ready file (rows with an `id` are updates, blank `id` means new)
+   - **reconciliation_summary.md** — a summary showing how many products were updated, how many are new, and any flagged items
+7. **Review the summary and spot check the output before uploading to POSaBIT**
 
 ### When you're done
 

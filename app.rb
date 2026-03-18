@@ -154,7 +154,7 @@ module VendorBridge
       File.write(File.join(data_dir, "posabit_data.csv"), raw, mode: "wb")
 
       # Handle BOM from Excel exports and Windows encodings
-      raw = raw.b.sub(/\A\xEF\xBB\xBF/, "").force_encoding("UTF-8")
+      raw = raw.b.sub(/\A\xEF\xBB\xBF/n, "").force_encoding("UTF-8")
       raw = raw.encode("UTF-8", "Windows-1252", invalid: :replace, undef: :replace) unless raw.valid_encoding?
       parsed = CSV.parse(raw, headers: true)
 

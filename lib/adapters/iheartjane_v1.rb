@@ -102,7 +102,16 @@ module VendorBridge
         row = {}
         headers.each_with_index do |header, idx|
           next if header.nil?
-          val = xlsx.cell(row_num, idx + 1)
+          col = idx + 1
+          val = xlsx.cell(row_num, col)
+
+          # Image columns store URLs as hyperlinks, not cell text.
+          # Prefer the hyperlink URL when available.
+          if val && header =~ /image/i
+            link = xlsx.hyperlink(row_num, col) rescue nil
+            val = link if link && link =~ /\Ahttps?:\/\//i
+          end
+
           row[header] = val
         end
         row

@@ -3,6 +3,7 @@ tmp/
 samples/
 data_files/
 coverage/
+log/
 *.DS_Store
 .bundle/
 vendor/bundle/

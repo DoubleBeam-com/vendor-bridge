@@ -13,6 +13,33 @@ sources:
       Gear: "(no direct match — likely NEW)"
       Merchandise: "(no direct match — likely NEW)"
 
+    matching_hints:
+      Flower: >
+        No weight or product name available. Match on brand + strain only.
+        If multiple catalog entries match (different weights), apply the
+        description and image to ALL matching products (bulk-apply).
+      Concentrate: >
+        Match on brand + strain + weight. All three fields are available.
+      Preroll: >
+        Match on brand + strain + weight. This tab includes both regular
+        and infused prerolls — check for "infused" in the product name
+        to separate them into different product types.
+      Edible: >
+        Match the vendor's "Ratio & Product Name" column against the
+        catalog name field, not strain_name.
+      Vape: >
+        The "Ratio & Product Name" column contains the strain name, not
+        the product name. Match on brand + strain.
+      Topical: >
+        Very few products typically. Match on name if possible, otherwise
+        flag for manual review.
+      Gear: >
+        No core products for paraphernalia in POSaBIT. These will almost
+        always be INSERTs. Flag for manual review.
+      Merchandise: >
+        No core products for merchandise in POSaBIT. These will almost
+        always be INSERTs. Flag for manual review.
+
   # cultivera:
   #   label: Cultivera
   #   adapter: generic_csv

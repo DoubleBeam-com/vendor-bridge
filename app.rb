@@ -4,6 +4,7 @@ require "securerandom"
 require "json"
 require "csv"
 require "fileutils"
+require "logger"
 Dir[File.join(__dir__, "lib/adapters/*.rb")].each { |f| require f }
 
 module VendorBridge
@@ -13,10 +14,24 @@ module VendorBridge
     set :tmp_dir, File.join(__dir__, "tmp")
     set :show_exceptions, false
 
+    configure do
+      log_dir = File.join(__dir__, "log")
+      FileUtils.mkdir_p(log_dir)
+      log_file = File.open(File.join(log_dir, "app.log"), "a")
+      log_file.sync = true
+      set :logger, Logger.new(log_file, level: Logger::INFO)
+      settings.logger.formatter = proc { |sev, time, _, msg| "#{time.strftime("%Y-%m-%d %H:%M:%S")} [#{sev}] #{msg}\n" }
+    end
+
     enable :sessions
     set :session_secret, ENV.fetch("SESSION_SECRET") { SecureRandom.hex(32) }
 
+    before do
+      settings.logger.info "#{request.request_method} #{request.path_info}"
+    end
+
     error ArgumentError do
+      settings.logger.error "ArgumentError: #{env["sinatra.error"].message}"
       @error_message = env["sinatra.error"].message
       erb :error
     end
@@ -24,6 +39,7 @@ module VendorBridge
     error 400..599 do
       @error_message = body.is_a?(Array) ? body.first : body.to_s
       @error_message = "Something went wrong. Please try again." if @error_message.to_s.strip.empty?
+      settings.logger.error "HTTP #{response.status}: #{@error_message}"
       erb :error
     end
 
@@ -80,14 +96,19 @@ module VendorBridge
 
       source_config = Adapters::Registry.fetch(source)
       adapter = Adapters::Registry.adapter_for(source)
+      settings.logger.info "Upload: id=#{id} source=#{source} file=#{file[:filename]} (#{file_bytes.size} bytes)"
 
       begin
         result = adapter.flatten(upload_path)
       rescue ArgumentError => e
+        settings.logger.warn "Flatten failed (ArgumentError): #{e.message}"
         halt 400, e.message
       rescue StandardError => e
+        settings.logger.error "Flatten failed (#{e.class}): #{e.message}"
         halt 400, "Could not process file. Make sure you're uploading the original #{ext.upcase} export from #{source_config["label"]}, not a CSV or other format."
       end
+
+      settings.logger.info "Flattened: #{result[:rows].size} products, #{result[:stats].size} sheets"
 
       pipeline = {
         "id" => id,
@@ -101,6 +122,7 @@ module VendorBridge
         "stats" => result[:stats],
         "category_mapping" => source_config["category_mapping"],
         "field_mapping" => source_config["field_mapping"],
+        "matching_hints" => source_config["matching_hints"],
       }
       save_pipeline(pipeline)
 
@@ -117,7 +139,10 @@ module VendorBridge
     # -- Preview flattened data --
     get "/preview/:id" do
       @pipeline = load_pipeline(params[:id])
-      halt 404, "Session not found" unless @pipeline
+      unless @pipeline
+        settings.logger.warn "Session not found: #{params[:id]}"
+        halt 404, "Session not found"
+      end
       erb :preview
     end
 
@@ -143,12 +168,16 @@ module VendorBridge
     # -- Upload POSaBIT ingest-ready CSV --
     post "/upload-posabit/:id" do
       pipeline = load_pipeline(params[:id])
-      halt 404, "Session not found" unless pipeline
+      unless pipeline
+        settings.logger.warn "Session not found for POSaBIT upload: #{params[:id]}"
+        halt 404, "Session not found"
+      end
 
       file = params[:posabit_file]
       halt 400, "No file uploaded" unless file
 
       raw = file[:tempfile].read
+      settings.logger.info "POSaBIT upload: id=#{params[:id]} file=#{file[:filename]} (#{raw.size} bytes)"
 
       # Save to data_files/ as fixed name (overwritten each run)
       File.write(File.join(data_dir, "posabit_data.csv"), raw, mode: "wb")
@@ -171,6 +200,7 @@ module VendorBridge
       builder = Adapters::ContextBuilder.new(pipeline)
       content = builder.generate(data_dir: data_dir)
       File.write(File.join(data_dir, "reconciliation_context.md"), content)
+      settings.logger.info "Context file generated: #{parsed.size} POSaBIT rows, #{parsed.headers.size} columns"
 
       redirect "/preview/#{params[:id]}"
     end

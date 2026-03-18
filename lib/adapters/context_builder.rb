@@ -10,6 +10,7 @@ module VendorBridge
         source_label   = @pipeline["source_label"] || source
         cat_mapping    = @pipeline["category_mapping"] || {}
         field_map      = @pipeline["field_mapping"] || []
+        match_hints    = @pipeline["matching_hints"] || {}
         posabit_cols   = @pipeline["posabit_columns"] || []
 
         <<~MD
@@ -54,6 +55,7 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 
 4. **Weight / Pack Size** — If multiple catalog entries match on category + brand + strain, use weight or pack size to pick the right one.
 
+#{matching_hints_text(match_hints)}
 ### Decision
 
 - **Match found** → **UPDATE**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.). Set `_action` to `UPDATE`.
@@ -154,6 +156,17 @@ Skip blank names or blank IDs when building lookups. If the same name appears wi
 
 This applies to **both UPDATE and NEW rows**. Some existing catalog rows may have a name but a missing ID — fix those too.
         SECTION
+      end
+
+      def matching_hints_text(hints)
+        return "" if hints.nil? || hints.empty?
+
+        lines = ["### Per-category matching notes", ""]
+        hints.each do |category, hint|
+          lines << "- **#{category}**: #{hint.strip}"
+        end
+        lines << ""
+        lines.join("\n")
       end
 
       def field_mapping_text(mapping)

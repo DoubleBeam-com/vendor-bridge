@@ -40,6 +40,35 @@ sources:
         No core products for merchandise in POSaBIT. These will almost
         always be INSERTs. Flag for manual review.
 
+  greenlabs:
+    label: Green Labs
+    adapter: greenlabs_v1
+    category_mapping:
+      Infused Preroll: Preroll
+      Vape: Cartridge
+      Edible: "Edible Solid"
+      Drink: "Edible Liquid"
+      Wellness: "Capsule"
+
+    matching_hints:
+      Infused Preroll: >
+        Brand is embedded in the Product name (first word/phrase before the
+        product details). Match on brand + strain. These are all infused
+        pre-rolls — check pack size and weight to distinguish variants.
+      Vape: >
+        Brand is embedded in the Product name. Match on brand + strain.
+        All items are disposable vape pens.
+      Edible: >
+        Brand is embedded in the Product name. Match on brand + product name.
+        Strain may not be relevant — focus on brand + name. Check _source_category
+        for subcategory (Gummies, Chocolates, Baked Goods).
+      Drink: >
+        Brand is embedded in the Product name. Match on brand + product name.
+        These are non-carbonated cannabis drinks.
+      Wellness: >
+        Brand is embedded in the Product name. Match on brand + product name.
+        These are therapeutic capsule products.
+
   # cultivera:
   #   label: Cultivera
   #   adapter: generic_csv
@@ -50,52 +79,63 @@ sources:
 field_mappings:
   brand_name:
     iheartjane: Brand
+    greenlabs: Product
     # cultivera: brand
-    notes: Also used for matching
+    notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it."
 
   strain_name:
     iheartjane: Strain
+    greenlabs: STRAIN
     # cultivera: strain_name
     notes: Also used for matching
 
   product_type_name:
     iheartjane: _product_category
+    greenlabs: _product_category
     # cultivera: category
     notes: Use the category mapping above
 
   name:
     iheartjane: Product Name
+    greenlabs: Product
     # cultivera: product_name
     notes: Use for name and display_name
 
   display_name:
     iheartjane: Product Name
+    greenlabs: Product
     # cultivera: display_name
 
   description:
     iheartjane: Product Description
+    greenlabs: DESCRIPTION
     # cultivera: description
 
   flower_type:
     iheartjane: Product Type
+    greenlabs: GENETICS
     # cultivera: flower_type
     notes: "Values like hybrid, indica, sativa"
 
   pack_size:
     iheartjane: Pack Size
+    greenlabs: "ITEMS PER PACK*"
     # cultivera: pack_size
 
   weight:
     iheartjane: "Amount [g]"
+    greenlabs: "WEIGHT*"
     # cultivera: weight_grams
     notes: "Also check Total Weight: Amount x Pack Size"
 
   image_url:
     iheartjane: "IMAGE LINK ONLY..."
+    greenlabs: AVATAR_IMAGE
     # cultivera: image_url
     notes: Only if value starts with http
 
   dosage:
     iheartjane: "Dosage (mg)"
+    greenlabs: THC_mg
     # cultivera: thc_mg
     notes: Include if a matching column exists

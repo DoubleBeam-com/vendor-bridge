@@ -111,11 +111,10 @@ field_mappings:
     greenlabs: DESCRIPTION
     # cultivera: description
 
-  flower_type:
-    iheartjane: Product Type
-    greenlabs: GENETICS
-    # cultivera: flower_type
-    notes: "Values like hybrid, indica, sativa"
+  lineage:
+    iheartjane: ~
+    greenlabs: ~
+    notes: "Populate from vendor data if available"
 
   pack_size:
     iheartjane: Pack Size
@@ -134,8 +133,17 @@ field_mappings:
     # cultivera: image_url
     notes: Only if value starts with http
 
-  dosage:
-    iheartjane: "Dosage (mg)"
-    greenlabs: THC_mg
-    # cultivera: thc_mg
-    notes: Include if a matching column exists
+  terpenes:
+    iheartjane: ~
+    greenlabs: ~
+    notes: "Comma-separated terpene names"
+
+  effects:
+    iheartjane: ~
+    greenlabs: ~
+    notes: "Comma-separated effect names"
+
+  flavors:
+    iheartjane: ~
+    greenlabs: ~
+    notes: "Comma-separated flavor names"

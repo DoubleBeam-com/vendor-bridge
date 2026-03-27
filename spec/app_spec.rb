@@ -213,6 +213,66 @@ RSpec.describe VendorBridge::App do
     end
   end
 
+  describe "GET /summary/:id" do
+    let(:pipeline_id) { "sumtest123" }
+    let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }
+    let(:data_dir) { File.join(File.dirname(__FILE__), "../data_files") }
+
+    before do
+      FileUtils.mkdir_p(session_dir)
+      FileUtils.mkdir_p(data_dir)
+      pipeline = {
+        "id" => pipeline_id,
+        "source" => "iheartjane",
+        "filename" => "test.xlsx",
+        "rows" => [],
+        "columns" => [],
+        "stats" => {},
+      }
+      File.write(File.join(session_dir, "#{pipeline_id}.json"), JSON.pretty_generate(pipeline))
+    end
+
+    context "without reconciliation output file" do
+      it "returns 400" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response.status).to eq(400)
+        expect(last_response.body).to include("Reconciliation output not found")
+      end
+    end
+
+    context "with reconciliation output" do
+      before do
+        csv = "id,product_type_name\n1,Flower\n2,Flower\n3,Concentrate\n"
+        File.write(File.join(data_dir, "reconciliation_output.csv"), csv)
+      end
+
+      it "renders summary page" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+      end
+    end
+
+    it "returns 404 for unknown session" do
+      get "/summary/nonexistent"
+      expect(last_response.status).to eq(404)
+    end
+  end
+
+  describe "POST /upload with no source" do
+    it "returns 400" do
+      txt = Tempfile.new(["test", ".xlsx"])
+      txt.write("hello")
+      txt.rewind
+
+      post "/upload",
+        file: Rack::Test::UploadedFile.new(txt.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include("No source selected")
+      txt.close!
+    end
+  end
+
   describe "GET /preview/:id" do
     let(:pipeline_id) { "prevtest1" }
     let(:session_dir) { File.join(File.dirname(__FILE__), "../tmp/sessions") }

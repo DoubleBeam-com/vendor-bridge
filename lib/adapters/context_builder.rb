@@ -48,19 +48,30 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 1. **Product category** — Match the vendor's `_product_category` to `product_type_name`:
 #{category_mapping_text(cat_mapping)}
 
-2. **Brand name** — Fuzzy match the vendor's `Brand` against `brand_name`. Ignore case and minor differences (e.g., "phat panda" = "Phat Panda").
+2. **Brand name** — Fuzzy match the vendor's brand against `brand_name`. Ignore case and minor differences (e.g., "phat panda" = "Phat Panda").
 
-3. **Strain name** — Fuzzy match the vendor's `Strain` against `strain_name`. Handle minor spelling differences, abbreviations, and missing words.
+3. **Strain name** — Fuzzy match the vendor's strain against `strain_name`. Handle minor spelling differences, abbreviations, and missing words.
 
 4. **Weight / Pack Size** — If multiple catalog entries match on category + brand + strain, use weight or pack size to pick the right one.
 
 #{matching_hints_text(match_hints)}
+### Canonical Values
+
+**Always use POSaBIT's existing spelling** for `brand_name`, `product_type_name`, and `strain_name`. When a vendor value fuzzy-matches a POSaBIT value, the output must use the POSaBIT version — never the vendor's variant.
+
+Examples:
+- Vendor says "Flowers" but POSaBIT has "Flower" → output uses **Flower**
+- Vendor says "phat panda" but POSaBIT has "Phat Panda" → output uses **Phat Panda**
+- Vendor says "Blue Dreamm" but POSaBIT has "Blue Dream" → output uses **Blue Dream**
+
+This applies to both **update** and **insert** rows. For inserts, if the brand/strain/product_type already exists elsewhere in the catalog, reuse that canonical spelling.
+
 ### Decision
 
-- **Match found** → **update**. Keep the entire existing row. Keep `id` and all ID fields (`brand_id`, `strain_id`, `product_type_id`, `product_family_id`). Only update fields where the vendor has better/newer data (description, image_url, etc.). Set `row_action` to `update`.
+- **Match found** → **update**. Keep the entire existing row. Only overwrite fields where the vendor has better/newer data (description, image_url, etc.).
 - **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → update. If no → **insert**.
-- **No match** → **insert**. Append at the bottom. Leave `id` blank. For `_id` fields, resolve from lookup tables (see ID Resolution below); leave blank only if no match found. Fill in what you can from the vendor data. Set `row_action` to `insert`.
-- **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is. Set `row_action` to `none`.
+- **No match** → **insert**. Append at the bottom. Leave `id` blank. Fill in what you can from the vendor data.
+- **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is.
 
 ### Important
 
@@ -70,9 +81,6 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 
 ---
 
-#{id_resolution_text}
----
-
 ## Output: `reconciliation_output.csv`
 
 Save to: **`data_files/reconciliation_output.csv`**
@@ -80,12 +88,10 @@ Save to: **`data_files/reconciliation_output.csv`**
 #{posabit_cols.empty? ? "" : "Use these exact columns in this exact order:\n\n```\n#{posabit_cols.join(",")}\n```\n"}
 ### Rules
 
-- The output uses the **exact same columns** as `posabit_data.csv`, in the **exact same order** (starting with `row_action`)
-- Set `row_action` to `none`, `update`, or `insert` for each row
-- **none rows**: Existing products with no modifications — keep as-is
-- **update rows**: Keep `id` and all existing values. Only overwrite fields where the vendor has newer data
-- **insert rows**: Append at the bottom. `id` is blank. Resolve `_id` fields from lookup tables (see ID Resolution); leave blank only if no match
+- The output uses the **exact same columns** as `posabit_data.csv`, in the **exact same order**
 - Do not remove any existing rows from `posabit_data.csv` — every original row must be in the output
+- **Existing rows**: Keep all values. Only overwrite fields where the vendor has newer data
+- **New rows**: Append at the bottom. `id` is blank. Fill in what you can from the vendor data
 
 #{field_mapping_text(field_map)}
 
@@ -110,34 +116,6 @@ Save to: **`data_files/reconciliation_output.csv`**
       def category_mapping_text(mapping)
         return "   *(No category mapping defined for this source)*" if mapping.empty?
         mapping.map { |vendor, posabit| "   - `#{vendor}` → `#{posabit}`" }.join("\n")
-      end
-
-      def id_resolution_text
-        <<~SECTION
-## ID Resolution
-
-As you process each row (update or insert), resolve `_id` fields from the existing catalog:
-
-**Step 1 — Build lookup tables** from `posabit_data.csv` before you start processing rows. Extract every unique name → id pair:
-
-| Name Column | ID Column |
-|---|---|
-| `brand_name` | `brand_id` |
-| `strain_name` | `strain_id` |
-| `product_type_name` | `product_type_id` |
-| `product_family_name` | `product_family_id` |
-
-Skip blank names or blank IDs when building lookups. If the same name appears with different IDs, keep the most common one.
-
-**Step 2 — Resolve IDs inline** as you write each output row:
-
-- If a `_name` field has a value but the corresponding `_id` is empty, look up the name in the table
-- Use **case-insensitive exact match first**, then **fuzzy match** (minor spelling differences, extra spaces, abbreviations)
-- If you find a confident match → populate the `_id`
-- If no confident match → leave the `_id` blank (do not guess)
-
-This applies to **both update and insert rows**. Some existing catalog rows may have a name but a missing ID — fix those too.
-        SECTION
       end
 
       def matching_hints_text(hints)

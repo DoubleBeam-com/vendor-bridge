@@ -69,6 +69,18 @@ sources:
         Brand is embedded in the Product name. Match on brand + product name.
         These are therapeutic capsule products.
 
+  greenlabs_inventory:
+    label: Green Labs Inventory
+    adapter: greenlabs_v2
+    category_mapping: {}
+
+    matching_hints:
+      default: >
+        This is vendor-by-venue inventory data, not product catalog data.
+        Match vendor names against brand_name in the POSaBIT catalog to
+        update quantity_on_hand. Fuzzy match vendor names — they may differ
+        slightly from POSaBIT brand names.
+
   # cultivera:
   #   label: Cultivera
   #   adapter: generic_csv
@@ -80,6 +92,7 @@ field_mappings:
   brand_name:
     iheartjane: Brand
     greenlabs: Product
+    greenlabs_inventory: Vendor
     # cultivera: brand
     notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it."
 
@@ -132,6 +145,10 @@ field_mappings:
     greenlabs: AVATAR_IMAGE
     # cultivera: image_url
     notes: Only if value starts with http
+
+  quantity_on_hand:
+    greenlabs_inventory: "Products In Stock"
+    notes: "Inventory count from vendor data — used to update stock levels"
 
   terpenes:
     iheartjane: ~

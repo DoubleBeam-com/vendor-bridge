@@ -49,7 +49,9 @@ module VendorBridge
       end
 
       def uploads_dir
-        File.join(settings.tmp_dir, "uploads")
+        dir = File.join(settings.tmp_dir, "uploads")
+        FileUtils.mkdir_p(dir)
+        dir
       end
 
       def data_dir

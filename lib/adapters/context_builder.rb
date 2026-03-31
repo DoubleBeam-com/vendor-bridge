@@ -90,6 +90,7 @@ Save to: **`data_files/reconciliation_output.csv`**
 
 - The output uses the **exact same columns** as `posabit_data.csv`, in the **exact same order**
 - Do not remove any existing rows from `posabit_data.csv` — every original row must be in the output
+- **Never change the product name** — the `name` column from `posabit_data.csv` is sacred. Never overwrite it with vendor data, even if the vendor has a different name for the same product. For new rows, set `name` from the vendor data.
 - **Existing rows**: Keep all values. Only overwrite fields where the vendor has newer data
 - **New rows**: Append at the bottom. `id` is blank. Fill in what you can from the vendor data
 

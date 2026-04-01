@@ -94,31 +94,106 @@ sources:
       Topical: Topical
       Accessories: "(no direct match — likely NEW)"
 
+    # ── Product name cleanup ────────────────────────────
+    # Dutchie Product Names contain format/weight/category suffixes that MUST
+    # be stripped before matching against POSaBIT strain_name.
+    # These rules are emitted into the reconciliation context file so an LLM
+    # doing the reconciliation can apply them.
+    name_cleanup_rules:
+      - pattern: "(DOH Compliant)"
+        action: "Remove anywhere in the name"
+        example: "'Blue Dream - Flower (DOH Compliant)' → 'Blue Dream - Flower'"
+      - pattern: "- Flower / - BB's / - Shake"
+        action: "Remove Dutchie format suffixes after a dash"
+        example: "'Blue Dream - Flower' → 'Blue Dream'; 'GG#4 - BB's' → 'GG#4'"
+      - pattern: "Live Resin Vape Cartridge / Distillate Vape Cartridge"
+        action: "Remove cartridge type suffix"
+        example: "'Garlic Jam + CBN Live Resin Vape Cartridge' → 'Garlic Jam + CBN'"
+      - pattern: "- Ng Concentrate / Live Resin Concentrate"
+        action: "Remove concentrate suffix"
+        example: "'GG#4 - 1g Concentrate' → 'GG#4'"
+      - pattern: "- NxN.Ng Pre-Rolls / Party Pack / Kief Infused"
+        action: "Remove preroll pack/weight suffix"
+        example: "'Blue Dream - 2x0.5g Pre-Rolls' → 'Blue Dream'; 'White Truffle - 2x0.5g Kief Infused Pre-Rolls' → 'White Truffle'"
+      - pattern: "Ng Flower (Passion Flower brand)"
+        action: "Remove embedded weight+category from Passion Flower product names"
+        example: "'Koffee Breath 7g Flower' → 'Koffee Breath'; 'Electric Watermelon 3.5g Flower' → 'Electric Watermelon'"
+      - pattern: "Capsules / Suppository / Topical / Single"
+        action: "Remove trailing product-type words"
+        example: "'Sativa Lifestyle Capsules' → 'Sativa Lifestyle'; 'Rectify Suppository' → 'Rectify'"
+      - pattern: "+ CBN / + CBG / + CBC / + CBD / + THCV"
+        action: "Strip minor cannabinoid qualifiers for matching (match base strain)"
+        example: "'Garlic Jam + CBN' matches POSaBIT strain 'Garlic Jam'; 'Dutch Treat + CBC' matches 'Dutch Treat'"
+      - pattern: "w/"
+        action: "Treat 'w/' as '+' for matching"
+        example: "'Deep Sleep w/ CBN' matches 'Deep Sleep + CBN'"
+
+    # ── Cross-category matching ──────────────────────────
+    cross_category_matching:
+      "Edible Liquid": ["Edible Solid"]
+      "Edible Solid": ["Edible Liquid"]
+      notes: >
+        Passion Flower RTM (Ready-To-Mix) drink products may appear in
+        Edible Solid in POSaBIT but Edible Liquid in Dutchie (or vice versa).
+        Also, some Fairwinds capsules are categorized as Edible Liquid in
+        POSaBIT. When matching edibles, search both categories.
+
     matching_hints:
       Flower: >
         Product Name often contains just the strain name (e.g., "MAC",
         "Blue Dream"). Match on brand + strain. Use _parsed_weight to
         disambiguate when multiple catalog entries match the same strain.
+        IMPORTANT: Dutchie has multiple variants per strain — "Blue Dream",
+        "Blue Dream - Flower", "Blue Dream - BB's", "Blue Dream - Shake",
+        plus "(DOH Compliant)" versions. Strip the format suffix to get the
+        base strain, then match each variant to a different POSaBIT entry.
+        Passion Flower products embed weight in the name (e.g., "Koffee
+        Breath 7g Flower") — strip the "Ng Flower" suffix to get the strain.
       Preroll: >
         Product Name contains pack and weight info (e.g., "Blue Dream -
-        2x0.5g Pre-Rolls"). Use _parsed_weight and _parsed_pack_size to
+        2x0.5g Pre-Rolls"). Strip the weight/pack suffix to extract the
+        strain name. Use _parsed_weight and _parsed_pack_size to
         disambiguate. Check _source_subcategory for "infused" to separate
-        infused prerolls from regular ones.
+        infused prerolls from regular ones. Also watch for "Party Pack"
+        and "Kief Infused" variants.
       Cartridge: >
-        Mapped from Dutchie "Vaporizers". Match on brand + strain. Check
-        _source_subcategory for "live-resin" vs regular cartridges.
+        Mapped from Dutchie "Vaporizers". Product names end with "Live Resin
+        Vape Cartridge" or "Distillate Vape Cartridge" — strip this to get
+        the strain+qualifier (e.g., "Garlic Jam + CBN"). Then strip the
+        minor cannabinoid qualifier ("+ CBN", "+ CBG", etc.) to get the
+        base strain for matching against POSaBIT strain_name. The POSaBIT
+        catalog often stores just the base strain (e.g., "Garlic Jam")
+        while Dutchie includes the cannabinoid blend in the product name.
+        Check _source_subcategory for "live-resin" vs regular cartridges.
       Concentrate: >
-        Match on brand + strain. Check _source_subcategory for concentrate
-        type (live-resin, wax, sugar, rso, crumble).
+        Product names end with "- 1g Concentrate" or "Live Resin Concentrate"
+        — strip to get strain. Also strip cannabinoid qualifiers ("+ CBG",
+        etc.) for matching. Check _source_subcategory for concentrate type
+        (live-resin, wax, sugar, rso, crumble).
       "Edible Solid": >
-        Match on brand + product name. Strain may not be relevant — focus
-        on brand + name.
+        Match on brand + product name against POSaBIT name field (not just
+        strain_name). Strain may not be relevant — focus on brand + name.
+        Strip "Capsules" / "Suppository" suffix before matching. POSaBIT
+        uses abbreviated names like "FW Capsule Lifestyle Sativa 307" while
+        Dutchie uses "Sativa Lifestyle Capsules" — match on key words.
+        IMPORTANT: Also search Edible Liquid in POSaBIT, as some capsule
+        products and RTM drinks may be categorized differently between systems.
       "Edible Liquid": >
         Includes Dutchie "Edible/drinks" and "Tincture" products. Match on
-        brand + product name.
+        brand + product name against POSaBIT name field. Strip "Single"
+        suffix from drink names. POSaBIT names like "FW Tincture Spectrum
+        3000 AM 036" differ significantly from Dutchie "Spectrum 3000 AM
+        Tincture" — use keyword/substring matching, not exact match.
+        IMPORTANT: Also search Edible Solid in POSaBIT, as Passion Flower
+        RTM products (Ready-To-Mix drinks) may be categorized as Edible
+        Solid in POSaBIT.
       Topical: >
-        Very few products. Match on brand + name if possible, otherwise
-        flag for manual review.
+        Very few products but naming varies greatly between systems.
+        POSaBIT uses names like "Fairwinds Manufacturing Topical CBD Flow
+        Gel 1.07oz" while Dutchie uses "FLOW CBD Gel Topical". Strip
+        "Topical" suffix, then match on key words within the brand. Also
+        match suppositories by stripping "Suppository" and matching the
+        product name (e.g., "Rectify" matches "FW Suppository Rectify 701").
       Accessories: >
         No core products in POSaBIT. These will almost always be INSERTs.
 

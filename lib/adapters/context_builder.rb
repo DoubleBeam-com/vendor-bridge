@@ -12,6 +12,8 @@ module VendorBridge
         field_map      = @pipeline["field_mapping"] || []
         match_hints    = @pipeline["matching_hints"] || {}
         posabit_cols   = @pipeline["posabit_columns"] || []
+        cleanup_rules  = @pipeline["name_cleanup_rules"] || []
+        cross_cat      = @pipeline["cross_category_matching"] || {}
 
         <<~MD
 # POSaBIT Product Reconciliation
@@ -55,6 +57,8 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 4. **Weight / Pack Size** — If multiple catalog entries match on category + brand + strain, use weight or pack size to pick the right one.
 
 #{matching_hints_text(match_hints)}
+#{name_cleanup_text(cleanup_rules)}
+#{cross_category_text(cross_cat)}
 ### Canonical Values
 
 **Always use POSaBIT's existing spelling** for `brand_name`, `product_type_name`, and `strain_name`. When a vendor value fuzzy-matches a POSaBIT value, the output must use the POSaBIT version — never the vendor's variant.
@@ -142,6 +146,39 @@ These columns are for audit purposes and will not be imported into POSaBIT.
         hints.each do |category, hint|
           lines << "- **#{category}**: #{hint.strip}"
         end
+        lines << ""
+        lines.join("\n")
+      end
+
+      def name_cleanup_text(rules)
+        return "" if rules.nil? || rules.empty?
+
+        lines = ["### Product Name Cleanup Rules", "",
+                 "Before matching, strip these patterns from vendor Product Names to extract the base strain/product name:", ""]
+        rules.each do |rule|
+          pattern = rule["pattern"] || rule[:pattern]
+          action  = rule["action"]  || rule[:action]
+          example = rule["example"] || rule[:example]
+          lines << "- **`#{pattern}`**: #{action}"
+          lines << "  - Example: #{example}" if example
+        end
+        lines << ""
+        lines.join("\n")
+      end
+
+      def cross_category_text(cross_cat)
+        return "" if cross_cat.nil? || cross_cat.empty?
+
+        notes = cross_cat.delete("notes") || cross_cat.delete(:notes)
+        return "" if cross_cat.empty? && notes.nil?
+
+        lines = ["### Cross-Category Matching", ""]
+        cross_cat.each do |dutchie_cat, posabit_cats|
+          next unless posabit_cats.is_a?(Array)
+          lines << "- **#{dutchie_cat}**: Also search #{posabit_cats.join(", ")} in POSaBIT"
+        end
+        lines << ""
+        lines << notes.strip if notes
         lines << ""
         lines.join("\n")
       end

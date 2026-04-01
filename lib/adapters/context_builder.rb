@@ -96,6 +96,17 @@ Save to: **`data_files/reconciliation_output.csv`**
 
 #{field_mapping_text(field_map)}
 
+### Audit Trail
+
+Add one extra column at the end: `_changes_made`
+
+For every row in the output, populate this column:
+- Existing rows with no updates: `none`
+- Updated rows: `UPDATE: <comma-separated list of fields that were changed>`
+- New rows: `INSERT: new product from #{source_label} data`
+
+This column is for audit purposes and will not be imported into POSaBIT.
+
 ---
 
 ## Workflow

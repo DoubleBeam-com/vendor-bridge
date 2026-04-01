@@ -81,6 +81,47 @@ sources:
         update quantity_on_hand. Fuzzy match vendor names — they may differ
         slightly from POSaBIT brand names.
 
+  dutchie:
+    label: Dutchie
+    adapter: dutchie_v1
+    category_mapping:
+      Flower: Flower
+      Preroll: Preroll
+      Cartridge: Cartridge
+      Concentrate: Concentrate
+      "Edible Solid": "Edible Solid"
+      "Edible Liquid": "Edible Liquid"
+      Topical: Topical
+      Accessories: "(no direct match — likely NEW)"
+
+    matching_hints:
+      Flower: >
+        Product Name often contains just the strain name (e.g., "MAC",
+        "Blue Dream"). Match on brand + strain. Use _parsed_weight to
+        disambiguate when multiple catalog entries match the same strain.
+      Preroll: >
+        Product Name contains pack and weight info (e.g., "Blue Dream -
+        2x0.5g Pre-Rolls"). Use _parsed_weight and _parsed_pack_size to
+        disambiguate. Check _source_subcategory for "infused" to separate
+        infused prerolls from regular ones.
+      Cartridge: >
+        Mapped from Dutchie "Vaporizers". Match on brand + strain. Check
+        _source_subcategory for "live-resin" vs regular cartridges.
+      Concentrate: >
+        Match on brand + strain. Check _source_subcategory for concentrate
+        type (live-resin, wax, sugar, rso, crumble).
+      "Edible Solid": >
+        Match on brand + product name. Strain may not be relevant — focus
+        on brand + name.
+      "Edible Liquid": >
+        Includes Dutchie "Edible/drinks" and "Tincture" products. Match on
+        brand + product name.
+      Topical: >
+        Very few products. Match on brand + name if possible, otherwise
+        flag for manual review.
+      Accessories: >
+        No core products in POSaBIT. These will almost always be INSERTs.
+
   # cultivera:
   #   label: Cultivera
   #   adapter: generic_csv
@@ -93,58 +134,68 @@ field_mappings:
     iheartjane: Brand
     greenlabs: Product
     greenlabs_inventory: Vendor
+    dutchie: Brand Name
     # cultivera: brand
     notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it."
 
   strain_name:
     iheartjane: Strain
     greenlabs: STRAIN
+    dutchie: Product Name
     # cultivera: strain_name
-    notes: Also used for matching
+    notes: "Also used for matching. For Dutchie, Product Name often IS the strain — LLM extracts it."
 
   product_type_name:
     iheartjane: _product_category
     greenlabs: _product_category
+    dutchie: _product_category
     # cultivera: category
     notes: Use the category mapping above
 
   name:
     iheartjane: Product Name
     greenlabs: Product
+    dutchie: Product Name
     # cultivera: product_name
     notes: Use for name and display_name
 
   display_name:
     iheartjane: Product Name
     greenlabs: Product
+    dutchie: Product Name
     # cultivera: display_name
 
   description:
     iheartjane: Product Description
     greenlabs: DESCRIPTION
+    dutchie: Description
     # cultivera: description
 
   lineage:
     iheartjane: ~
     greenlabs: ~
-    notes: "Populate from vendor data if available"
+    dutchie: _lineage
+    notes: "Populate from vendor data if available. Dutchie Type column maps to lineage (Hybrid, Indica, Sativa, etc.)."
 
   pack_size:
     iheartjane: Pack Size
     greenlabs: "ITEMS PER PACK*"
+    dutchie: _parsed_pack_size
     # cultivera: pack_size
 
   weight:
     iheartjane: "Amount [g]"
     greenlabs: "WEIGHT*"
+    dutchie: _parsed_weight
     # cultivera: weight_grams
-    notes: "Also check Total Weight: Amount x Pack Size"
+    notes: "Also check Total Weight: Amount x Pack Size. For Dutchie, weight is parsed from Product Name."
 
   image_url:
     iheartjane: "IMAGE LINK ONLY..."
     greenlabs: AVATAR_IMAGE
+    dutchie: _image_url
     # cultivera: image_url
-    notes: Only if value starts with http
+    notes: "Only if value starts with http. Dutchie has 9 Image columns — adapter picks the first non-nil URL."
 
   quantity_on_hand:
     greenlabs_inventory: "Products In Stock"
@@ -153,14 +204,17 @@ field_mappings:
   terpenes:
     iheartjane: ~
     greenlabs: ~
-    notes: "Comma-separated terpene names"
+    dutchie: _terpenes
+    notes: "Comma-separated terpene names. Dutchie has alternating Terpene/Terpene value columns — adapter collapses them."
 
   effects:
     iheartjane: ~
     greenlabs: ~
+    dutchie: ~
     notes: "Comma-separated effect names"
 
   flavors:
     iheartjane: ~
     greenlabs: ~
+    dutchie: ~
     notes: "Comma-separated flavor names"

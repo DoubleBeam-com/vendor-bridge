@@ -7,7 +7,8 @@
       "Bash(ruby -c lib/adapters/registry.rb)",
       "Bash(ruby -c lib/adapters/iheartjane_v1.rb)",
       "Bash(ruby -c app.rb)",
-      "Bash(ruby -e \"require_relative ''lib/adapters/registry''; puts VendorBridge::Adapters::Registry.available.inspect; config = VendorBridge::Adapters::Registry.fetch\\(''iheartjane''\\); puts config[''label'']; puts config[''field_mapping''].length.to_s + '' field mappings''; config[''field_mapping''].each { |m| puts \"\"  #{m[''posabit'']} <- #{m[''vendor'']}\"\" }; puts config[''category_mapping''].inspect\")"
+      "Bash(ruby -e \"require_relative ''lib/adapters/registry''; puts VendorBridge::Adapters::Registry.available.inspect; config = VendorBridge::Adapters::Registry.fetch\\(''iheartjane''\\); puts config[''label'']; puts config[''field_mapping''].length.to_s + '' field mappings''; config[''field_mapping''].each { |m| puts \"\"  #{m[''posabit'']} <- #{m[''vendor'']}\"\" }; puts config[''category_mapping''].inspect\")",
+      "Bash(ruby -e '# encoding: utf-8:*)"
     ]
   }
 }

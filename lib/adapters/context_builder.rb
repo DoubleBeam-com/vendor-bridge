@@ -98,14 +98,19 @@ Save to: **`data_files/reconciliation_output.csv`**
 
 ### Audit Trail
 
-Add one extra column at the end: `_changes_made`
+Add two extra columns at the end:
 
-For every row in the output, populate this column:
-- Existing rows with no updates: `none`
-- Updated rows: `UPDATE: <comma-separated list of fields that were changed>`
-- New rows: `INSERT: new product from #{source_label} data`
+1. **`row_action`** — the app reads this column to build the reconciliation summary:
+   - `none` — existing row with no updates
+   - `update` — existing row that was updated with vendor data
+   - `insert` — new product from #{source_label} data
 
-This column is for audit purposes and will not be imported into POSaBIT.
+2. **`updated_fields`** — comma-separated list of fields that were changed:
+   - Existing rows with no updates: *(empty)*
+   - Updated rows: e.g. `image_url` or `description, image_url, lineage`
+   - New rows: `new product`
+
+These columns are for audit purposes and will not be imported into POSaBIT.
 
 ---
 

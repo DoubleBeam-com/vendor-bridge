@@ -195,7 +195,7 @@ field_mappings:
     greenlabs: AVATAR_IMAGE
     dutchie: _image_url
     # cultivera: image_url
-    notes: "Only if value starts with http. Dutchie has 9 Image columns — adapter picks the first non-nil URL."
+    notes: "**Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has 9 Image columns — adapter picks the first non-nil URL."
 
   quantity_on_hand:
     greenlabs_inventory: "Products In Stock"

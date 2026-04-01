@@ -223,11 +223,39 @@ module VendorBridge
       parsed = CSV.parse(raw, headers: true)
 
       @summary = {}
+      @updates = []
+      @inserts = []
+
       parsed.each do |row|
         type = row["product_type_name"] || "Unknown"
-        action = (row["row_action"] || "none").downcase
+
+        # Handle both column formats: row_action or _changes_made
+        if parsed.headers.include?("row_action")
+          action = (row["row_action"] || "none").downcase
+          fields = row["updated_fields"] || ""
+        else
+          raw_change = (row["_changes_made"] || "none").strip
+          if raw_change.start_with?("UPDATE:")
+            action = "update"
+            fields = raw_change.sub("UPDATE:", "").strip
+          elsif raw_change.start_with?("INSERT:")
+            action = "insert"
+            fields = ""
+          else
+            action = "none"
+            fields = ""
+          end
+        end
+
         @summary[type] ||= { "none" => 0, "update" => 0, "insert" => 0 }
         @summary[type][action] = (@summary[type][action] || 0) + 1
+
+        detail = { name: row["name"], brand: row["brand_name"], product_type: type, strain: row["strain_name"] }
+        if action == "update"
+          @updates << detail.merge(updated_fields: fields)
+        elsif action == "insert"
+          @inserts << detail
+        end
       end
 
       erb :summary

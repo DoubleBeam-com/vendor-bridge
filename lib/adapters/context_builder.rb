@@ -116,6 +116,10 @@ Add two extra columns at the end:
 
 These columns are for audit purposes and will not be imported into POSaBIT.
 
+### Reference
+
+See **`sample_result.csv`** in the project root for a concrete example showing the expected output format — including `none`, `update`, and `insert` rows with correct `row_action` and `updated_fields` values.
+
 ---
 
 ## Workflow

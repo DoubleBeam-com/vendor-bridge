@@ -55,6 +55,62 @@
     </table>
   </div>
 
+  <% if @updates.any? %>
+  <details class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <summary class="px-4 py-3 cursor-pointer font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border-b border-gray-200">
+      Updated Products (<%= @updates.size %>)
+    </summary>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-200">
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Name</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Brand</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Type</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Fields Changed</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <% @updates.sort_by { |u| [u[:product_type], u[:brand] || "", u[:name] || ""] }.each do |u| %>
+        <tr>
+          <td class="px-4 py-2 text-gray-900"><%= u[:name] %></td>
+          <td class="px-4 py-2 text-gray-600"><%= u[:brand] %></td>
+          <td class="px-4 py-2 text-gray-600"><%= u[:product_type] %></td>
+          <td class="px-4 py-2 text-yellow-700 text-xs"><%= u[:updated_fields] %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </details>
+  <% end %>
+
+  <% if @inserts.any? %>
+  <details class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <summary class="px-4 py-3 cursor-pointer font-medium text-green-700 bg-green-50 hover:bg-green-100 border-b border-gray-200">
+      New Products (<%= @inserts.size %>)
+    </summary>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-200">
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Name</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Brand</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Type</th>
+          <th class="text-left px-4 py-2 font-medium text-gray-700">Strain</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <% @inserts.sort_by { |i| [i[:product_type], i[:brand] || "", i[:name] || ""] }.each do |i| %>
+        <tr>
+          <td class="px-4 py-2 text-gray-900"><%= i[:name] %></td>
+          <td class="px-4 py-2 text-gray-600"><%= i[:brand] %></td>
+          <td class="px-4 py-2 text-gray-600"><%= i[:product_type] %></td>
+          <td class="px-4 py-2 text-gray-600"><%= i[:strain] %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </details>
+  <% end %>
+
   <div class="flex justify-center gap-4">
     <a href="/preview/<%= id %>" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back</a>
     <a href="/" class="text-sm text-gray-500 hover:text-gray-700">Start over</a>

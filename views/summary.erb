@@ -20,6 +20,65 @@
     </p>
   </div>
 
+  <% if @metrics %>
+  <%
+    grade = @metrics["overall_grade"]
+    match_rate = @metrics["match_rate"]
+    enrichment = @metrics["enrichment_rate"]
+    if grade >= 70
+      grade_bg = "bg-green-50"
+      grade_border = "border-green-200"
+      grade_text_lg = "text-green-600"
+      grade_bar_bg = "bg-green-500"
+      grade_label = "High"
+    elsif grade >= 50
+      grade_bg = "bg-yellow-50"
+      grade_border = "border-yellow-200"
+      grade_text_lg = "text-yellow-600"
+      grade_bar_bg = "bg-yellow-500"
+      grade_label = "Moderate"
+    else
+      grade_bg = "bg-red-50"
+      grade_border = "border-red-200"
+      grade_text_lg = "text-red-600"
+      grade_bar_bg = "bg-red-500"
+      grade_label = "Low"
+    end
+
+    # Color helpers for sub-metrics
+    mr_color = match_rate >= 70 ? "text-green-600" : (match_rate >= 50 ? "text-yellow-600" : "text-red-600")
+    er_color = enrichment >= 70 ? "text-green-600" : (enrichment >= 50 ? "text-yellow-600" : "text-red-600")
+  %>
+  <div class="<%= grade_bg %> rounded-lg border <%= grade_border %> p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Reconciliation Accuracy</h2>
+        <p class="text-xs text-gray-400 mt-0.5"><%= grade_label %> confidence</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-3xl font-bold <%= grade_text_lg %>"><%= grade %>%</span>
+      </div>
+    </div>
+
+    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+      <div class="<%= grade_bar_bg %> h-2.5 rounded-full transition-all" style="width: <%= [grade, 100].min %>%"></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <div class="text-gray-500">Match Rate</div>
+        <div class="font-semibold <%= mr_color %>"><%= match_rate %>%</div>
+        <div class="text-xs text-gray-400"><%= @metrics["total_updates"] %> of <%= @metrics["total_actionable"] %> vendor products matched</div>
+      </div>
+      <div>
+        <div class="text-gray-500">Data Enrichment</div>
+        <div class="font-semibold <%= er_color %>"><%= enrichment %>%</div>
+        <div class="text-xs text-gray-400"><%= @metrics["multi_field_updates"] %> of <%= @metrics["total_updates"] %> updates enriched multiple fields</div>
+      </div>
+    </div>
+  </div>
+  <% end %>
+
   <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
     <table class="w-full text-sm">
       <thead>

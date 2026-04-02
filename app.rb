@@ -260,6 +260,35 @@ module VendorBridge
         end
       end
 
+      # Compute accuracy grade from CSV data
+      total_updates = @updates.size
+      total_inserts = @inserts.size
+      total_actionable = total_updates + total_inserts  # vendor rows that were processed
+
+      if total_actionable > 0
+        # Match rate: % of vendor rows that found a POSaBIT match (vs. inserted as new)
+        match_rate = (total_updates.to_f / total_actionable * 100).round(1)
+
+        # Data enrichment: % of updates that changed >1 field (richer = more confident match)
+        multi_field_updates = @updates.count { |u| (u[:updated_fields] || "").split(",").map(&:strip).reject(&:empty?).size > 1 }
+        enrichment_rate = total_updates > 0 ? (multi_field_updates.to_f / total_updates * 100).round(1) : 0.0
+
+        # Overall grade: 60% match rate + 40% enrichment
+        overall_grade = (match_rate * 0.6 + enrichment_rate * 0.4).round(1)
+
+        @metrics = {
+          "overall_grade" => overall_grade,
+          "match_rate" => match_rate,
+          "enrichment_rate" => enrichment_rate,
+          "total_actionable" => total_actionable,
+          "total_updates" => total_updates,
+          "total_inserts" => total_inserts,
+          "multi_field_updates" => multi_field_updates,
+        }
+      else
+        @metrics = nil
+      end
+
       erb :summary
     end
 

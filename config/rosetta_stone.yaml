@@ -101,8 +101,12 @@ sources:
     # doing the reconciliation can apply them.
     name_cleanup_rules:
       - pattern: "(DOH Compliant)"
-        action: "Remove anywhere in the name"
-        example: "'Blue Dream - Flower (DOH Compliant)' → 'Blue Dream - Flower'"
+        action: >
+          Remove anywhere in the name. After removal, match the cleaned strain
+          against POSaBIT rows — they may have "DOH" in their name prefix
+          (e.g., "Pre-Rolls DOH - Blue Dream") or use standard format
+          (e.g., "1/8 oz. Flower - Blue Dream - 3.5g").
+        example: "'Blue Dream - Flower (DOH Compliant)' → strip to 'Blue Dream' → matches '1/8 oz. Flower - Blue Dream - 3.5g'"
       - pattern: "- Flower / - BB's / - Shake"
         action: "Remove Dutchie format suffixes after a dash"
         example: "'Blue Dream - Flower' → 'Blue Dream'; 'GG#4 - BB's' → 'GG#4'"
@@ -196,6 +200,88 @@ sources:
         product name (e.g., "Rectify" matches "FW Suppository Rectify 701").
       Accessories: >
         No core products in POSaBIT. These will almost always be INSERTs.
+
+    # ── Disambiguating vendor fields ──────────────────────
+    # These underscore-prefixed fields in the flattened CSV carry critical
+    # info for variant matching. The context builder emits them so the AI
+    # knows how to interpret them.
+    disambiguating_fields:
+      _source_subcategory:
+        description: >
+          Dutchie subcategory slug parsed from the source data. Key values:
+        values:
+          "small-buds": >
+            BB's product line. POSaBIT names these "Flower BB's - {strain} - {weight}"
+            or "Packaged Flower BB's DOH - {strain} - {weight}".
+            When _source_subcategory = "small-buds", search POSaBIT for names
+            containing "BB's" and the strain. Do NOT insert as new.
+          "shake": >
+            Shake products. POSaBIT names these "Shake - {strain} - {weight}".
+          "infused": >
+            Infused prerolls. Search POSaBIT for "Infused Pre-Rolls - {strain}".
+          "packs": >
+            Multi-pack prerolls. Use _parsed_pack_size to match the specific
+            pack variant in POSaBIT.
+          "live-resin": >
+            Live resin concentrates or cartridges. Check POSaBIT
+            concentrate_type or name for "Live Resin".
+      _parsed_pack_size:
+        description: >
+          Integer pack count parsed from product name (e.g., "56x0.5g" → 56).
+          POSaBIT encodes pack size in the product name. Use to match preroll
+          multi-packs:
+        values:
+          "2": "matches POSaBIT '.5g 2 pack' or '(0.5gx2)' rows"
+          "10": "matches POSaBIT '.5g 10 pack' or '(0.5gx10)' rows"
+          "20": "matches POSaBIT '.5g 20 pack' or '(0.5gx20)' rows"
+          "56": "matches POSaBIT 'Party Pack (0.5gx56)' rows"
+      _parsed_weight:
+        description: >
+          Numeric weight in grams parsed from product name (e.g., "3.5g" → 3.5).
+          POSaBIT appends weight to names (e.g., "- 3.5g"). Use to pick the
+          right variant when brand + strain match multiple entries.
+
+    # ── Matching examples ─────────────────────────────────
+    # Concrete before/after examples showing how tricky vendor names map to
+    # POSaBIT products. These are emitted into the context file.
+    matching_examples:
+      - vendor_name: "Blue Dream - BB's"
+        vendor_fields: "_source_subcategory: small-buds"
+        posabit_name: "Flower BB's - Blue Dream - 3.5g"
+        action: UPDATE
+        reasoning: >
+          "BB's" suffix + subcategory "small-buds" = BB's product line.
+          POSaBIT prefixes with "Flower BB's" and appends weight. Strip
+          "- BB's" to get strain "Blue Dream", search for "BB's" + "Blue Dream".
+      - vendor_name: "Blue Dream - Flower (DOH Compliant)"
+        vendor_fields: "_product_category: Flower"
+        posabit_name: "1/8 oz. Flower - Blue Dream - 3.5g"
+        action: UPDATE
+        reasoning: >
+          Strip "(DOH Compliant)" and "- Flower" suffix. Base strain = "Blue Dream".
+          Search POSaBIT Flower category for "Blue Dream". Matches standard
+          naming "1/8 oz. Flower - Blue Dream - 3.5g".
+      - vendor_name: "Blue Dream - Party Pack 56x0.5g Pre-Rolls"
+        vendor_fields: "_parsed_pack_size: 56, _parsed_weight: 0.5, _source_subcategory: packs"
+        posabit_name: "Pre-Rolls DOH - Blue Dream - Party Pack (0.5gx56)"
+        action: UPDATE
+        reasoning: >
+          Strip pack/weight suffix to get "Blue Dream". Use _parsed_pack_size=56
+          to find POSaBIT row with "(0.5gx56)" or "Party Pack" in name.
+      - vendor_name: "White Truffle - 2x0.5g Kief Infused Pre-Rolls"
+        vendor_fields: "_source_subcategory: infused, _parsed_pack_size: 2, _parsed_weight: 0.5"
+        posabit_name: "Infused Pre-Rolls - White Truffle - (0.5gx2)"
+        action: UPDATE
+        reasoning: >
+          Subcategory "infused" + "Kief Infused" in name → search POSaBIT for
+          "Infused Pre-Rolls" + strain "White Truffle" + pack size matching "(0.5gx2)".
+      - vendor_name: "Koffee Breath 7g Flower"
+        vendor_fields: "_product_category: Flower, _parsed_weight: 7"
+        posabit_name: "Koffee Breath - Flower 7g [Passion Flower]"
+        action: UPDATE
+        reasoning: >
+          Passion Flower brand embeds weight in name. Strip "7g Flower" suffix
+          to get strain "Koffee Breath". Use weight=7 to match the 7g variant.
 
   # cultivera:
   #   label: Cultivera

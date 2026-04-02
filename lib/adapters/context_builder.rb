@@ -14,6 +14,8 @@ module VendorBridge
         posabit_cols   = @pipeline["posabit_columns"] || []
         cleanup_rules  = @pipeline["name_cleanup_rules"] || []
         cross_cat      = @pipeline["cross_category_matching"] || {}
+        disambig       = @pipeline["disambiguating_fields"] || {}
+        examples       = @pipeline["matching_examples"] || []
 
         <<~MD
 # POSaBIT Product Reconciliation
@@ -57,6 +59,8 @@ For each row in `#{source}_flattened.csv`, search `posabit_data.csv` for a match
 4. **Weight / Pack Size** — If multiple catalog entries match on category + brand + strain, use weight or pack size to pick the right one.
 
 #{matching_hints_text(match_hints)}
+#{disambiguating_fields_text(disambig)}
+#{matching_examples_text(examples)}
 #{name_cleanup_text(cleanup_rules)}
 #{cross_category_text(cross_cat)}
 ### Canonical Values
@@ -133,6 +137,8 @@ See **`sample_result.csv`** in the project root for a concrete example showing t
 ---
 
 **Please spot check the output before uploading the file to POSaBIT. This is very important.**
+
+#{verification_checklist_text}
         MD
       end
 
@@ -185,6 +191,75 @@ See **`sample_result.csv`** in the project root for a concrete example showing t
         lines << notes.strip if notes
         lines << ""
         lines.join("\n")
+      end
+
+      def disambiguating_fields_text(fields)
+        return "" if fields.nil? || fields.empty?
+
+        lines = ["### Vendor Fields for Disambiguation", "",
+                 "The vendor CSV includes these underscore-prefixed fields that are critical for matching variants:", ""]
+        fields.each do |field_name, info|
+          desc = info["description"] || info[:description] || ""
+          lines << "- **`#{field_name}`**: #{desc.strip}"
+          values = info["values"] || info[:values]
+          if values.is_a?(Hash)
+            values.each do |val, explanation|
+              lines << "  - `#{val}` — #{explanation.strip}"
+            end
+          end
+        end
+        lines << ""
+        lines.join("\n")
+      end
+
+      def matching_examples_text(examples)
+        return "" if examples.nil? || examples.empty?
+
+        lines = ["### Matching Examples", "",
+                 "These show how tricky vendor names map to POSaBIT products:", ""]
+        examples.each_with_index do |ex, i|
+          vendor  = ex["vendor_name"]  || ex[:vendor_name]
+          fields  = ex["vendor_fields"] || ex[:vendor_fields]
+          posabit = ex["posabit_name"] || ex[:posabit_name]
+          action  = ex["action"]       || ex[:action] || "UPDATE"
+          reason  = ex["reasoning"]    || ex[:reasoning] || ""
+          lines << "#{i + 1}. **Vendor**: `#{vendor}` (#{fields})"
+          lines << "   **POSaBIT**: `#{posabit}` → **#{action}**"
+          lines << "   **Why**: #{reason.strip}"
+          lines << ""
+        end
+        lines.join("\n")
+      end
+
+      def verification_checklist_text
+        <<~CHECKLIST
+---
+
+## Pre-Submit Verification (Second Pass)
+
+Before finalizing `reconciliation_output.csv`, run these checks:
+
+### 1. INSERT audit
+
+For **every** INSERT row, verify that no existing POSaBIT row shares the same brand + strain in the same (or related) category. If one does, it is almost certainly a variant — convert it to an UPDATE instead.
+
+### 2. Variant field checks
+
+- If `_source_subcategory` is `"small-buds"` → the product belongs to the BB's line. Search POSaBIT for names containing "BB's" + the strain. Do NOT insert.
+- If the original vendor name contained `"(DOH Compliant)"` → search POSaBIT for names containing "DOH" + the strain. Do NOT insert.
+- If `_parsed_pack_size` has a value → search POSaBIT for that pack size in the product name (e.g., "(0.5gx56)" for pack_size=56). Do NOT insert.
+
+### 3. Duplicate insert check
+
+No two INSERT rows should have the same brand + strain + category. If duplicates exist, keep only the one with the most complete data.
+
+### 4. Lineage sanity check
+
+Do NOT overwrite a more specific POSaBIT lineage with a less specific vendor value:
+- `indica_hybrid` → `indica` is a **loss of precision** — keep `indica_hybrid`
+- `sativa_hybrid` → `sativa` is a **loss of precision** — keep `sativa_hybrid`
+- `hybrid` → `cbd` is a **semantic change** — keep the original unless you are certain
+        CHECKLIST
       end
 
       def field_mapping_text(mapping)

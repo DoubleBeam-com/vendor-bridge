@@ -79,4 +79,76 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
       expect(md).not_to include("Use these exact columns")
     end
   end
+
+  context "with disambiguating fields" do
+    it "includes vendor fields section" do
+      pipeline = base_pipeline.merge(
+        "disambiguating_fields" => {
+          "_source_subcategory" => {
+            "description" => "Subcategory slug from vendor",
+            "values" => { "small-buds" => "BB's product line" },
+          },
+        }
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Vendor Fields for Disambiguation")
+      expect(md).to include("`_source_subcategory`")
+      expect(md).to include("`small-buds`")
+      expect(md).to include("BB's product line")
+    end
+  end
+
+  context "with empty disambiguating fields" do
+    it "omits vendor fields section" do
+      pipeline = base_pipeline.merge("disambiguating_fields" => {})
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("Vendor Fields for Disambiguation")
+    end
+  end
+
+  context "with matching examples" do
+    it "includes examples section" do
+      pipeline = base_pipeline.merge(
+        "matching_examples" => [
+          {
+            "vendor_name" => "Blue Dream - BB's",
+            "vendor_fields" => "_source_subcategory: small-buds",
+            "posabit_name" => "Flower BB's - Blue Dream - 3.5g",
+            "action" => "UPDATE",
+            "reasoning" => "BB's suffix means small-buds line",
+          },
+        ]
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Matching Examples")
+      expect(md).to include("`Blue Dream - BB's`")
+      expect(md).to include("`Flower BB's - Blue Dream - 3.5g`")
+      expect(md).to include("UPDATE")
+    end
+  end
+
+  context "with empty matching examples" do
+    it "omits examples section" do
+      pipeline = base_pipeline.merge("matching_examples" => [])
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("Matching Examples")
+    end
+  end
+
+  it "always includes verification checklist" do
+    builder = described_class.new(base_pipeline)
+    md = builder.generate(data_dir: data_dir)
+
+    expect(md).to include("Pre-Submit Verification")
+    expect(md).to include("INSERT audit")
+    expect(md).to include("Lineage sanity check")
+  end
 end

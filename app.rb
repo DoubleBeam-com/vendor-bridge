@@ -127,6 +127,8 @@ module VendorBridge
         "matching_hints" => source_config["matching_hints"],
         "name_cleanup_rules" => source_config["name_cleanup_rules"],
         "cross_category_matching" => source_config["cross_category_matching"],
+        "disambiguating_fields" => source_config["disambiguating_fields"],
+        "matching_examples"     => source_config["matching_examples"],
       }
       save_pipeline(pipeline)
 

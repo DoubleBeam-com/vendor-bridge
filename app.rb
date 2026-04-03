@@ -45,7 +45,9 @@ module VendorBridge
 
     helpers do
       def session_dir
-        File.join(settings.tmp_dir, "sessions")
+        dir = File.join(settings.tmp_dir, "sessions")
+        FileUtils.mkdir_p(dir)
+        dir
       end
 
       def uploads_dir

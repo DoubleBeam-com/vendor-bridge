@@ -1,7 +1,7 @@
 require_relative "spec_helper"
 
 RSpec.describe "Green Labs Inventory adapter" do
-  let(:xlsx_path) { File.join(__dir__, "../samples/green_labs.xlsx") }
+  let(:xlsx_path) { fixture_path("greenlabs_inventory_sample.xlsx") }
 
   describe VendorBridge::Adapters::GreenlabsV2 do
     let(:adapter) { VendorBridge::Adapters::GreenlabsV2.new }
@@ -33,7 +33,7 @@ RSpec.describe "Green Labs Inventory adapter" do
       result = adapter.flatten(xlsx_path)
 
       expect(result[:stats]).to be_a(Hash)
-      expect(result[:stats].keys).to include("Sheet1")
+      expect(result[:stats].keys).to include("All Vendors")
       result[:stats].each_value do |s|
         expect(s).to have_key(:total)
         expect(s).to have_key(:kept)

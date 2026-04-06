@@ -1,7 +1,7 @@
 require_relative "spec_helper"
 
 RSpec.describe "Dutchie adapter" do
-  let(:xlsx_path) { File.join(__dir__, "../samples/Fairwinds Dutchie Export.xlsx") }
+  let(:xlsx_path) { fixture_path("dutchie_sample.xlsx") }
 
   describe VendorBridge::Adapters::DutchieV1 do
     let(:adapter) { VendorBridge::Adapters::DutchieV1.new }
@@ -141,7 +141,7 @@ RSpec.describe "Dutchie adapter" do
       get location
       expect(last_response).to be_ok
       expect(last_response.body).to include("Products Extracted")
-      expect(last_response.body).to include("Dutchie")
+      expect(last_response.body).to include("dutchie_sample.xlsx")
     end
 
     it "exports flattened CSV" do

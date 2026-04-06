@@ -60,8 +60,8 @@ RSpec.describe VendorBridge::App do
       end
     end
 
-    context "with a valid iHeartJane XLSX", if: File.exist?(File.join(__dir__, "../samples/iheartjane_template.xlsx")) do
-      let(:xlsx_path) { File.join(__dir__, "../samples/iheartjane_template.xlsx") }
+    context "with a valid iHeartJane XLSX" do
+      let(:xlsx_path) { fixture_path("iheartjane_sample.xlsx") }
 
       it "processes and redirects to preview" do
         post "/upload",

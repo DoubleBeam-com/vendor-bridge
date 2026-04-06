@@ -1,5 +1,7 @@
 # Vendor Bridge
 
+![CI](https://github.com/DoubleBeam-com/vendor-bridge/actions/workflows/ci.yml/badge.svg)
+
 Clean up your product export files and get them ready to import into POSaBIT.
 
 Your data stays on your computer the entire time — nothing is uploaded to the internet.

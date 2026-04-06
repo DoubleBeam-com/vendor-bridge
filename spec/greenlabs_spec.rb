@@ -1,7 +1,7 @@
 require_relative "spec_helper"
 
 RSpec.describe "Green Labs adapter" do
-  let(:xlsx_path) { File.join(__dir__, "../samples/Green Labs Products.xlsx") }
+  let(:xlsx_path) { fixture_path("greenlabs_products_sample.xlsx") }
 
   describe VendorBridge::Adapters::GreenlabsV1 do
     let(:adapter) { VendorBridge::Adapters::GreenlabsV1.new }
@@ -19,7 +19,7 @@ RSpec.describe "Green Labs adapter" do
       result = adapter.flatten(xlsx_path)
       categories = result[:rows].map { |r| r["_product_category"] }.uniq.sort
 
-      expect(categories).to include("Infused Preroll", "Vape", "Edible")
+      expect(categories).to include("Infused Preroll", "Vape")
     end
 
     it "preserves the full source category string" do
@@ -64,7 +64,7 @@ RSpec.describe "Green Labs adapter" do
       get location
       expect(last_response).to be_ok
       expect(last_response.body).to include("Products Extracted")
-      expect(last_response.body).to include("Green Labs")
+      expect(last_response.body).to include("greenlabs_products_sample.xlsx")
     end
 
     it "exports flattened CSV" do

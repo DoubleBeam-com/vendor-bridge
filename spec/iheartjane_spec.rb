@@ -1,10 +1,9 @@
 require_relative "spec_helper"
 
 RSpec.describe "iHeartJane adapter" do
-  let(:xlsx_path) { File.join(__dir__, "../samples/iheartjane_template.xlsx") }
-  let(:sample_exists) { File.exist?(xlsx_path) }
+  let(:xlsx_path) { fixture_path("iheartjane_sample.xlsx") }
 
-  describe VendorBridge::Adapters::IheartjaneV1, if: File.exist?(File.join(__dir__, "../samples/iheartjane_template.xlsx")) do
+  describe VendorBridge::Adapters::IheartjaneV1 do
     let(:adapter) { VendorBridge::Adapters::IheartjaneV1.new }
 
     it "flattens the iHeartJane XLSX into rows" do
@@ -111,9 +110,7 @@ RSpec.describe "iHeartJane adapter" do
     end
   end
 
-  describe "Web flow", type: :request, if: File.exist?(File.join(__dir__, "../samples/iheartjane_template.xlsx")) do
-    let(:xlsx_path) { File.join(__dir__, "../samples/iheartjane_template.xlsx") }
-
+  describe "Web flow", type: :request do
     it "processes upload and redirects to preview" do
       post "/upload",
         source: "iheartjane",
@@ -126,7 +123,7 @@ RSpec.describe "iHeartJane adapter" do
       get location
       expect(last_response).to be_ok
       expect(last_response.body).to include("Products Extracted")
-      expect(last_response.body).to include("iheartjane_template.xlsx")
+      expect(last_response.body).to include("iheartjane_sample.xlsx")
     end
 
     it "exports flattened CSV" do

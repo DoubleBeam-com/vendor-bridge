@@ -66,7 +66,9 @@ module VendorBridge
           raw["_product_category"] = category
           raw["_source_subcategory"] = raw["Subcategory"]&.to_s&.strip
           raw["_source_row"] = row_num
-          raw["_image_url"] = first_image_url(raw, headers)
+          cover, additional = extract_image_urls(raw, headers)
+          raw["_cover_image_url"] = cover
+          raw["_image_urls"] = additional
           raw["_terpenes"] = collapse_terpenes(raw, headers)
           raw["_lineage"] = raw["Type"]&.to_s&.strip
 
@@ -81,7 +83,7 @@ module VendorBridge
         xlsx.close
 
         synthetic = %w[_source_sheet _product_category _source_subcategory _source_row
-                       _image_url _terpenes _lineage _parsed_weight _parsed_pack_size]
+                       _cover_image_url _image_urls _terpenes _lineage _parsed_weight _parsed_pack_size]
         synthetic.each { |s| all_columns.add(s) }
         ordered_columns = synthetic + (all_columns.to_a - synthetic).sort
 
@@ -131,13 +133,15 @@ module VendorBridge
         terpene_pairs.empty? ? nil : terpene_pairs.join(", ")
       end
 
-      def first_image_url(row, headers)
+      def extract_image_urls(row, headers)
         image_headers = headers.select { |h| h&.match?(/\AImage/i) }
-        image_headers.each do |h|
+        urls = image_headers.filter_map do |h|
           val = row[h]
-          return val if val.is_a?(String) && val.match?(/\Ahttps?:\/\//i)
+          val if val.is_a?(String) && val.match?(/\Ahttps?:\/\//i)
         end
-        nil
+        cover = urls.first
+        additional = urls.drop(1)
+        [cover, additional.empty? ? nil : additional.join(", ")]
       end
 
       def parse_weight_and_pack(product_name)

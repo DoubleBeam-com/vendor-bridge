@@ -95,7 +95,7 @@ RSpec.describe "Green Labs adapter" do
       expect(config["label"]).to eq("Green Labs")
       expect(config["category_mapping"]).to include("Infused Preroll" => "Preroll")
       expect(config["field_mapping"]).to be_an(Array)
-      expect(config["field_mapping"].map { |m| m["posabit"] }).to include("strain_name", "description", "image_url")
+      expect(config["field_mapping"].map { |m| m["posabit"] }).to include("strain_name", "description", "cover_image_url")
     end
   end
 end

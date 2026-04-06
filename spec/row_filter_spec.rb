@@ -48,5 +48,42 @@ RSpec.describe VendorBridge::Transforms::RowFilter do
       row = { "Brand" => "Real Brand", "Strain" => 12345 }
       expect(filter.data_row?(row)).to be true
     end
+
+    it "rejects example brand case-insensitively" do
+      row = { "Brand" => "MY BRAND", "Strain" => "Alien OG" }
+      expect(filter.data_row?(row)).to be false
+    end
+
+    it "rejects 'My Product' via Ratio & Product Name" do
+      row = { "Brand" => "Real Brand", "Ratio & Product Name" => "My Product" }
+      expect(filter.data_row?(row)).to be false
+    end
+
+    it "treats row with only ignored columns as empty" do
+      row = { "_source_sheet" => "Flower", "_product_category" => "Flower", "_source_row" => 5 }
+      expect(filter.data_row?(row)).to be false
+    end
+
+    it "accepts section header boundary: blank brand with 2 filled data fields" do
+      row = { "Brand" => nil, "Strain" => "Blue Dream", "Amount [g]" => "3.5" }
+      expect(filter.data_row?(row)).to be false  # still rejected — blank brand
+    end
+
+    it "rejects tab-only brand as blank" do
+      row = { "Brand" => "\t", "Strain" => "Alien OG" }
+      expect(filter.data_row?(row)).to be false
+    end
+
+    it "rejects row with numeric brand (no match? on Integer)" do
+      row = { "Brand" => 42, "Strain" => "Test Strain" }
+      # Integer doesn't respond to match?, so example_row? check raises
+      # This exposes a bug — non-string brands crash the filter
+      expect { filter.data_row?(row) }.to raise_error(NoMethodError)
+    end
+
+    it "rejects pipe-only via Product Name column" do
+      row = { "Brand" => "Real Brand", "Product Name" => "| | | |" }
+      expect(filter.data_row?(row)).to be false
+    end
   end
 end

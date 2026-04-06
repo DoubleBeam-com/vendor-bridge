@@ -1,3 +1,3 @@
-id,active,sku_reference,name,display_name,brand_name,product_type_name,concentrate_type,strain_name,lineage,weight,weight_unit,pack_size,cost,min_reorder_qty,terpenes,effects,flavors,description,instructions,ingredients,image_url,quantity_on_hand
-458066,true,,Blackberry Headband - Flower 3.5g [Passion Flower],Blackberry Headband - Flower 3.5g,Passion Flower,Flower,,Blackberry Headband,,3.5,g,1,,,,,,"Great strain",,,https://example.com/img.jpg,10
+id,active,sku_reference,name,display_name,brand_name,product_type_name,concentrate_type,strain_name,lineage,weight,weight_unit,pack_size,cost,min_reorder_qty,terpenes,effects,flavors,description,instructions,ingredients,cover_image_url,image_urls,quantity_on_hand
+458066,true,,Blackberry Headband - Flower 3.5g [Passion Flower],Blackberry Headband - Flower 3.5g,Passion Flower,Flower,,Blackberry Headband,,3.5,g,1,,,,,,"Great strain",,,https://example.com/img.jpg,,10
 458067,true,,Blueberry Lemonade Cartridge | Passion Flower 1g,Blueberry Lemonade Cartridge,Passion Flower,Concentrate,,Blueberry Lemonade,,1.0,g,1,,,,,,"Tasty cart",,,,0

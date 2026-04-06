@@ -13,7 +13,7 @@ RSpec.describe "Dutchie adapter" do
       expect(result[:rows].size).to be > 0
       expect(result[:columns]).to include(
         "_source_sheet", "_product_category", "_source_subcategory", "_source_row",
-        "_image_url", "_terpenes", "_lineage", "_parsed_weight", "_parsed_pack_size"
+        "_cover_image_url", "_image_urls", "_terpenes", "_lineage", "_parsed_weight", "_parsed_pack_size"
       )
       expect(result[:columns]).to include("Product Name", "Brand Name", "Category")
     end
@@ -55,13 +55,24 @@ RSpec.describe "Dutchie adapter" do
       end
     end
 
-    it "picks the first image URL into _image_url" do
+    it "picks the first image URL into _cover_image_url" do
       result = adapter.flatten(xlsx_path)
-      with_image = result[:rows].select { |r| r["_image_url"] }
+      with_image = result[:rows].select { |r| r["_cover_image_url"] }
 
       expect(with_image).not_to be_empty
       with_image.each do |row|
-        expect(row["_image_url"]).to match(/\Ahttps?:\/\//)
+        expect(row["_cover_image_url"]).to match(/\Ahttps?:\/\//)
+      end
+    end
+
+    it "collects additional image URLs into _image_urls" do
+      result = adapter.flatten(xlsx_path)
+      with_additional = result[:rows].select { |r| r["_image_urls"] }
+
+      with_additional.each do |row|
+        row["_image_urls"].split(", ").each do |url|
+          expect(url).to match(/\Ahttps?:\/\//)
+        end
       end
     end
 
@@ -162,7 +173,7 @@ RSpec.describe "Dutchie adapter" do
       expect(config["category_mapping"]).to include("Flower" => "Flower")
       expect(config["category_mapping"]).to include("Preroll" => "Preroll")
       expect(config["field_mapping"]).to be_an(Array)
-      expect(config["field_mapping"].map { |m| m["posabit"] }).to include("brand_name", "description", "image_url", "terpenes", "lineage")
+      expect(config["field_mapping"].map { |m| m["posabit"] }).to include("brand_name", "description", "cover_image_url", "image_urls", "terpenes", "lineage")
     end
   end
 end

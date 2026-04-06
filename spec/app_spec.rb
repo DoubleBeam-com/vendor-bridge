@@ -252,6 +252,122 @@ RSpec.describe VendorBridge::App do
       end
     end
 
+    context "with mixed actions output" do
+      before do
+        FileUtils.cp(fixture_path("summary_mixed.csv"), File.join(data_dir, "reconciliation_output.csv"))
+      end
+
+      it "computes correct metrics" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+
+        # 4 updates, 2 inserts = 6 actionable
+        # match_rate = 4/6 * 100 = 66.7%
+        # multi-field updates: rows 1 (3 fields) and 4 (2 fields) = 2 of 4
+        # enrichment_rate = 2/4 * 100 = 50.0%
+        # overall = 66.7 * 0.6 + 50.0 * 0.4 = 40.02 + 20.0 = 60.0
+        body = last_response.body
+        expect(body).to include("66.7")   # match rate
+        expect(body).to include("50.0")   # enrichment rate
+        expect(body).to include("60.0")   # overall grade
+      end
+
+      it "tracks updates and inserts separately" do
+        get "/summary/#{pipeline_id}"
+        body = last_response.body
+
+        # Should show update details
+        expect(body).to include("Blue Dream Flower")
+        expect(body).to include("GG#4 Flower")
+        # Should show insert details
+        expect(body).to include("Grapefruit")
+        expect(body).to include("Nag Champa")
+      end
+
+      it "groups summary by product type" do
+        get "/summary/#{pipeline_id}"
+        body = last_response.body
+
+        expect(body).to include("Flower")
+        expect(body).to include("Cartridge")
+        expect(body).to include("Edible Solid")
+      end
+    end
+
+    context "with all-inserts output" do
+      before do
+        FileUtils.cp(fixture_path("summary_all_inserts.csv"), File.join(data_dir, "reconciliation_output.csv"))
+      end
+
+      it "computes 0% match rate" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+
+        # 0 updates, 3 inserts → match_rate = 0.0%
+        body = last_response.body
+        expect(body).to include("0.0")
+      end
+    end
+
+    context "with legacy _changes_made format" do
+      before do
+        FileUtils.cp(fixture_path("summary_legacy_format.csv"), File.join(data_dir, "reconciliation_output.csv"))
+      end
+
+      it "parses UPDATE and INSERT actions from _changes_made column" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+
+        body = last_response.body
+        # 2 updates, 1 insert = 3 actionable
+        # match_rate = 2/3 * 100 = 66.7%
+        expect(body).to include("66.7")
+        # Should recognize the insert
+        expect(body).to include("Grapefruit")
+      end
+    end
+
+    context "with no actionable rows" do
+      before do
+        csv = "id,name,product_type_name,row_action,updated_fields\n1,Product A,Flower,none,\n2,Product B,Flower,none,\n"
+        File.write(File.join(data_dir, "reconciliation_output.csv"), csv)
+      end
+
+      it "renders without metrics" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+        # No actionable rows → @metrics is nil, no grade displayed
+        body = last_response.body
+        expect(body).not_to include("overall_grade")
+      end
+    end
+
+    context "with missing product_type_name" do
+      before do
+        csv = "id,name,row_action,updated_fields\n1,Mystery Product,update,description\n"
+        File.write(File.join(data_dir, "reconciliation_output.csv"), csv)
+      end
+
+      it "defaults to Unknown type" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+        expect(last_response.body).to include("Unknown")
+      end
+    end
+
+    context "with BOM-encoded output" do
+      before do
+        csv = "\xEF\xBB\xBFid,name,product_type_name,row_action,updated_fields\n1,Test,Flower,update,description\n"
+        File.write(File.join(data_dir, "reconciliation_output.csv"), csv, mode: "wb")
+      end
+
+      it "strips BOM and parses correctly" do
+        get "/summary/#{pipeline_id}"
+        expect(last_response).to be_ok
+        expect(last_response.body).to include("Flower")
+      end
+    end
+
     it "returns 404 for unknown session" do
       get "/summary/nonexistent"
       expect(last_response.status).to eq(404)

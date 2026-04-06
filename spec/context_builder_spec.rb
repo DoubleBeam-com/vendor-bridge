@@ -151,4 +151,73 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
     expect(md).to include("INSERT audit")
     expect(md).to include("Lineage sanity check")
   end
+
+  context "with name cleanup rules" do
+    it "renders pattern, action, and example" do
+      pipeline = base_pipeline.merge(
+        "name_cleanup_rules" => [
+          {
+            "pattern" => "(DOH Compliant)",
+            "action" => "Remove anywhere in the name.",
+            "example" => "'Blue Dream - Flower (DOH Compliant)' → 'Blue Dream'",
+          },
+          {
+            "pattern" => "- Flower / - BB's",
+            "action" => "Remove format suffixes after a dash",
+          },
+        ]
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Product Name Cleanup Rules")
+      expect(md).to include("`(DOH Compliant)`")
+      expect(md).to include("Remove anywhere in the name.")
+      expect(md).to include("Blue Dream")
+      expect(md).to include("`- Flower / - BB's`")
+    end
+  end
+
+  context "with cross-category matching" do
+    it "renders cross-category search instructions" do
+      pipeline = base_pipeline.merge(
+        "cross_category_matching" => {
+          "Edible Liquid" => ["Edible Solid"],
+          "Edible Solid" => ["Edible Liquid"],
+          "notes" => "Passion Flower RTM products may cross categories.",
+        }
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Cross-Category Matching")
+      expect(md).to include("Edible Liquid")
+      expect(md).to include("Also search Edible Solid")
+      expect(md).to include("Passion Flower RTM")
+    end
+  end
+
+  it "renders field mapping as a markdown table" do
+    builder = described_class.new(base_pipeline)
+    md = builder.generate(data_dir: data_dir)
+
+    expect(md).to include("| Vendor Column | POSaBIT Column | Notes |")
+    expect(md).to include("| `Brand` | `brand_name` |")
+    expect(md).to include("| `Strain` | `strain_name` |")
+  end
+
+  it "references cover_image_url in decision and audit sections" do
+    builder = described_class.new(base_pipeline)
+    md = builder.generate(data_dir: data_dir)
+
+    expect(md).to include("cover_image_url")
+    expect(md).not_to match(/\bimage_url\b(?!s)/)  # no bare "image_url" (but "image_urls" ok)
+  end
+
+  it "wraps posabit columns in a code block" do
+    builder = described_class.new(base_pipeline)
+    md = builder.generate(data_dir: data_dir)
+
+    expect(md).to include("```\nid,active,name,brand_name,strain_name\n```")
+  end
 end

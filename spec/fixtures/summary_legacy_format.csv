@@ -1,0 +1,5 @@
+id,name,brand_name,product_type_name,strain_name,_changes_made
+1,Blue Dream Flower,Sunshine Farms,Flower,Blue Dream,"UPDATE: description, cover_image_url"
+2,GG#4 Flower,Sunshine Farms,Flower,GG4,none
+3,Grapefruit New,Sunshine Farms,Flower,Grapefruit,INSERT:
+4,Garlic Jam Cart,Passion Flower,Cartridge,Garlic Jam,"UPDATE: cover_image_url"

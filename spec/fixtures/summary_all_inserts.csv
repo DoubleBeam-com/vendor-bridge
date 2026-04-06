@@ -1,0 +1,4 @@
+id,name,brand_name,product_type_name,strain_name,row_action,updated_fields
+,New Product 1,Brand A,Flower,Strain A,insert,new product
+,New Product 2,Brand A,Flower,Strain B,insert,new product
+,New Product 3,Brand B,Concentrate,Strain C,insert,new product

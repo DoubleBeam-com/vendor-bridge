@@ -97,7 +97,8 @@ The fields the output CSV must contain:
 | unit_of_measure | gram, eighth, each, etc. |
 | thc_percentage | THC % |
 | cbd_percentage | CBD % |
-| image_url | URL to product image |
+| cover_image_url | Primary/hero product image URL |
+| image_urls | Additional image URLs (comma-separated) |
 | is_available | true / false |
 | sku | Vendor SKU |
 

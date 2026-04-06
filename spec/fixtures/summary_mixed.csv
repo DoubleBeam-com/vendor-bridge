@@ -1,0 +1,9 @@
+id,name,brand_name,product_type_name,strain_name,cover_image_url,image_urls,row_action,updated_fields
+1,Blue Dream Flower,Sunshine Farms,Flower,Blue Dream,https://example.com/img1.jpg,,update,"description, cover_image_url, lineage"
+2,GG#4 Flower,Sunshine Farms,Flower,GG4,https://example.com/img2.jpg,,update,cover_image_url
+3,Garlic Jam Cart,Passion Flower,Cartridge,Garlic Jam,,,none,
+4,Sativa Capsules,Fairwinds,Edible Solid,Sativa,https://example.com/img3.jpg,,update,"description, cover_image_url"
+5,9lb Hammer,Passion Flower,Flower,9lb Hammer,,,none,
+6,Grapefruit,Sunshine Farms,Flower,Grapefruit,https://example.com/img4.jpg,,insert,new product
+7,Nag Champa,Sunshine Farms,Flower,Nag Champa,https://example.com/img5.jpg,,insert,new product
+8,Deep Sleep Cart,Passion Flower,Cartridge,Deep Sleep,https://example.com/img6.jpg,,update,cover_image_url

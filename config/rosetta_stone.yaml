@@ -351,12 +351,17 @@ field_mappings:
     # cultivera: weight_grams
     notes: "Also check Total Weight: Amount x Pack Size. For Dutchie, weight is parsed from Product Name."
 
-  image_url:
+  cover_image_url:
     iheartjane: "IMAGE LINK ONLY..."
     greenlabs: AVATAR_IMAGE
-    dutchie: _image_url
-    # cultivera: image_url
-    notes: "**Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has 9 Image columns — adapter picks the first non-nil URL."
+    dutchie: _cover_image_url
+    # cultivera: cover_image_url
+    notes: "Primary/hero product image. **Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
+
+  image_urls:
+    dutchie: _image_urls
+    # cultivera: image_urls
+    notes: "Comma-separated additional image URLs (beyond the cover image). Dutchie adapter populates this from Image columns 2+. iHeartJane and Green Labs do not currently provide additional images."
 
   quantity_on_hand:
     greenlabs_inventory: "Products In Stock"

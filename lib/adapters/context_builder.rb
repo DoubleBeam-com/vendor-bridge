@@ -76,7 +76,7 @@ This applies to both **update** and **insert** rows. For inserts, if the brand/s
 
 ### Decision
 
-- **Match found** → **update**. Keep the entire existing row. Only overwrite fields where the vendor has better/newer data (description, image_url, etc.).
+- **Match found** → **update**. Keep the entire existing row. Only overwrite fields where the vendor has better/newer data (description, cover_image_url, etc.).
 - **Category + Brand match but strain differs** → Check if the catalog `name` contains the vendor's product name or strain. If yes → update. If no → **insert**.
 - **No match** → **insert**. Append at the bottom. Leave `id` blank. Fill in what you can from the vendor data.
 - **No vendor match** → Existing catalog row with no corresponding vendor row. Keep as-is.
@@ -115,7 +115,7 @@ Add two extra columns at the end:
 
 2. **`updated_fields`** — comma-separated list of fields that were changed:
    - Existing rows with no updates: *(empty)*
-   - Updated rows: e.g. `image_url` or `description, image_url, lineage`
+   - Updated rows: e.g. `cover_image_url` or `description, cover_image_url, lineage`
    - New rows: `new product`
 
 These columns are for audit purposes and will not be imported into POSaBIT.

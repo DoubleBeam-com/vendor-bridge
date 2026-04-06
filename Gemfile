@@ -13,4 +13,5 @@ group :test do
   gem "rspec", "~> 3.13"
   gem "rack-test", "~> 2.1"
   gem "simplecov", "~> 0.22", require: false
+  gem "simplecov-cobertura", require: false
 end

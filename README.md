@@ -1,6 +1,7 @@
 # Vendor Bridge
 
 ![CI](https://github.com/DoubleBeam-com/vendor-bridge/actions/workflows/ci.yml/badge.svg)
+![Lint](https://github.com/DoubleBeam-com/vendor-bridge/actions/workflows/lint.yml/badge.svg)
 
 Clean up your product export files and get them ready to import into POSaBIT.
 

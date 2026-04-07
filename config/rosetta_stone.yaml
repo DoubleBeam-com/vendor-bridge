@@ -27,6 +27,10 @@ sources:
       Edible: >
         Match the vendor's "Ratio & Product Name" column against the
         catalog name field, not strain_name.
+        CAUTION: Capsules and tinctures must not be mixed. If a vendor
+        product name contains "Capsule" or "Capsules", do NOT match it
+        against POSaBIT tincture rows, and vice versa. Flag any cross-form
+        matches for manual review.
       Vape: >
         The "Ratio & Product Name" column contains the strain name, not
         the product name. Match on brand + strain.
@@ -182,6 +186,10 @@ sources:
         Dutchie uses "Sativa Lifestyle Capsules" — match on key words.
         IMPORTANT: Also search Edible Liquid in POSaBIT, as some capsule
         products and RTM drinks may be categorized differently between systems.
+        CAUTION: Capsules and tinctures must not be mixed. If a vendor
+        product name contains "Capsule" or "Capsules", do NOT match it
+        against POSaBIT tincture rows, and vice versa. Flag any cross-form
+        matches for manual review.
       "Edible Liquid": >
         Includes Dutchie "Edible/drinks" and "Tincture" products. Match on
         brand + product name against POSaBIT name field. Strip "Single"
@@ -191,6 +199,10 @@ sources:
         IMPORTANT: Also search Edible Solid in POSaBIT, as Passion Flower
         RTM products (Ready-To-Mix drinks) may be categorized as Edible
         Solid in POSaBIT.
+        CAUTION: Do NOT match tincture products against capsule rows. If a
+        vendor product name contains "Tincture", it must only match POSaBIT
+        tincture rows — never capsule rows. Flag any cross-form matches for
+        manual review.
       Topical: >
         Very few products but naming varies greatly between systems.
         POSaBIT uses names like "Fairwinds Manufacturing Topical CBD Flow
@@ -342,6 +354,7 @@ field_mappings:
     iheartjane: Pack Size
     greenlabs: "ITEMS PER PACK*"
     dutchie: _parsed_pack_size
+    default: "Items Per Pack"
     # cultivera: pack_size
 
   weight:

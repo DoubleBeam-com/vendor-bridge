@@ -119,7 +119,14 @@ Add three extra columns at the end:
    - New rows: `new product`
 
 3. **`warnings`** — reviewer alerts that need manual verification:
-   - `capsule/tincture mismatch` — when updating `cover_image_url` on an Edible Solid, Edible Liquid, or Capsule product and the vendor's source category suggests a different product form than the POSaBIT row (e.g., vendor says "Tincture" but POSaBIT row is a capsule, or vendor product name contains "Capsule" but POSaBIT row is a tincture). These images must not be applied without verification.
+   - `capsule/tincture mismatch` — set this when updating
+     `cover_image_url` on an Edible Solid, Edible Liquid, or
+     Capsule product and the vendor's source category suggests a
+     different product form than the POSaBIT row (e.g., vendor
+     says "Tincture" but POSaBIT row is a capsule, or vendor
+     product name contains "Capsule" but POSaBIT row is a
+     tincture). These images must not be applied without
+     verification.
    - Leave empty when no warnings apply.
 
 These columns are for audit purposes and will not be imported into POSaBIT.
@@ -266,11 +273,16 @@ Do NOT overwrite a more specific POSaBIT lineage with a less specific vendor val
 
 ### 5. Capsule / Tincture image guard
 
-Capsules and tinctures are **very different product forms** that must not be mixed. When `cover_image_url` is updated on a product in `Edible Solid`, `Edible Liquid`, or `Capsule`:
+Capsules and tinctures are **very different product forms** that
+must not be mixed. When `cover_image_url` is updated on a product
+in `Edible Solid`, `Edible Liquid`, or `Capsule`:
 
-- Verify the vendor image actually matches the product form (capsule vs tincture vs gummy vs drink)
-- A capsule image on a tincture row (or vice versa) is **wrong** — do not apply it
-- If the vendor's source category suggests a different product form than the POSaBIT row, flag it for manual review instead of updating
+- Verify the vendor image actually matches the product form
+  (capsule vs tincture vs gummy vs drink)
+- A capsule image on a tincture row (or vice versa) is **wrong**
+  — do not apply it
+- If the vendor's source category suggests a different product
+  form than the POSaBIT row, flag for manual review
         CHECKLIST
       end
 

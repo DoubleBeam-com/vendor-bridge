@@ -28,3 +28,4 @@ Metrics/BlockLength:
 
 Layout/LineLength:
   Max: 140
+  AllowHeredoc: true

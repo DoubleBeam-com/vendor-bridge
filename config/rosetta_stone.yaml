@@ -295,11 +295,21 @@ sources:
           Passion Flower brand embeds weight in name. Strip "7g Flower" suffix
           to get strain "Koffee Breath". Use weight=7 to match the 7g variant.
 
-  # cultivera:
-  #   label: Cultivera
-  #   adapter: generic_csv
-  #   category_mapping:
-  #     flower: Flower
+  cultivera:
+    label: Cultivera
+    adapter: cultivera_v1
+    category_mapping:
+      Preroll: Preroll
+      Flower: Flower
+
+    matching_hints:
+      default: >
+        The primary goal is to match Cultivera products to POSaBIT
+        core products and populate sku_reference from the _sku field.
+        Match on _parsed_strain + _parsed_weight + _parsed_pack_size.
+        Product-Line (in _source_subcategory) tells you the product type.
+        Cultivera data has no images or descriptions — only update
+        sku_reference on matched rows.
 
 # ── Field rosetta stone (keyed by POSaBIT field) ────
 field_mappings:
@@ -308,41 +318,41 @@ field_mappings:
     greenlabs: Product
     greenlabs_inventory: Vendor
     dutchie: Brand Name
-    # cultivera: brand
-    notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it."
+    cultivera: _vendor_name
+    notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it. For Cultivera, extracted from the title row."
 
   strain_name:
     iheartjane: Strain
     greenlabs: STRAIN
     dutchie: Product Name
-    # cultivera: strain_name
-    notes: "Also used for matching. For Dutchie, Product Name often IS the strain — LLM extracts it."
+    cultivera: _parsed_strain
+    notes: "Also used for matching. For Dutchie, Product Name often IS the strain — LLM extracts it. For Cultivera, parsed from Product name."
 
   product_type_name:
     iheartjane: _product_category
     greenlabs: _product_category
     dutchie: _product_category
-    # cultivera: category
+    cultivera: _product_category
     notes: Use the category mapping above
 
   name:
     iheartjane: Product Name
     greenlabs: Product
     dutchie: Product Name
-    # cultivera: product_name
+    cultivera: Product
     notes: Use for name and display_name
 
   display_name:
     iheartjane: Product Name
     greenlabs: Product
     dutchie: Product Name
-    # cultivera: display_name
+    cultivera: Product
 
   description:
     iheartjane: Product Description
     greenlabs: DESCRIPTION
     dutchie: Description
-    # cultivera: description
+    cultivera: ~
 
   lineage:
     iheartjane: ~
@@ -355,26 +365,30 @@ field_mappings:
     greenlabs: "ITEMS PER PACK*"
     dutchie: _parsed_pack_size
     default: "Items Per Pack"
-    # cultivera: pack_size
+    cultivera: _parsed_pack_size
 
   weight:
     iheartjane: "Amount [g]"
     greenlabs: "WEIGHT*"
     dutchie: _parsed_weight
-    # cultivera: weight_grams
-    notes: "Also check Total Weight: Amount x Pack Size. For Dutchie, weight is parsed from Product Name."
+    cultivera: _parsed_weight
+    notes: "Also check Total Weight: Amount x Pack Size. For Dutchie and Cultivera, weight is parsed from Product Name."
 
   cover_image_url:
     iheartjane: "IMAGE LINK ONLY..."
     greenlabs: AVATAR_IMAGE
     dutchie: _cover_image_url
-    # cultivera: cover_image_url
+    cultivera: ~
     notes: "Primary/hero product image. **Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
 
   image_urls:
     dutchie: _image_urls
-    # cultivera: image_urls
+    cultivera: ~
     notes: "Comma-separated additional image URLs (beyond the cover image). Dutchie adapter populates this from Image columns 2+. iHeartJane and Green Labs do not currently provide additional images."
+
+  sku_reference:
+    cultivera: _sku
+    notes: "Cultivera product SKU — primary value for PO integration. Populate from _sku on matched rows."
 
   quantity_on_hand:
     greenlabs_inventory: "Products In Stock"

@@ -311,6 +311,59 @@ sources:
         Cultivera data has no images or descriptions — only update
         sku_reference on matched rows.
 
+  cnduit:
+    label: CNDUIT
+    adapter: cnduit_v1
+    category_mapping:
+      Flower: Flower
+      Preroll: Preroll
+      "Infused Preroll": "Infused Preroll"
+      Vape: Cartridge
+      Concentrate: Concentrate
+
+    matching_hints:
+      Flower: >
+        Match on brand + Product Name (strain). The Type column gives lineage
+        (Hybrid/Indica/Sativa). Image URLs are Google Drive links.
+      Preroll: >
+        Section title encodes pack size (2pk, 5pk, 28pk). Use _parsed_pack_size
+        to disambiguate variants. Same strains appear across multiple pack sizes.
+      "Infused Preroll": >
+        Includes Bubblehash Infused Joints and Terp Infused Prerolls.
+        Section title encodes pack size. Match on brand + strain + pack size.
+      Vape: >
+        Section title distinguishes Disposable/All-in-one from 510 Cartridge.
+        The _section_title field carries this form factor info.
+      Concentrate: >
+        Section title distinguishes BHO from Rosin. The _section_title field
+        carries this info. Match on brand + strain.
+
+    disambiguating_fields:
+      _section_title:
+        description: >
+          Product line from the section header, after the brand name.
+          Encodes form factor and pack size.
+        values:
+          "Classic Prerolls - 2pk": "2-pack classic prerolls"
+          "Classic Prerolls - 5pk": "5-pack classic prerolls"
+          "Classic Prerolls - 28pk": "28-pack classic prerolls"
+          "Flower Joints - 2pk": "2-pack full flower joints"
+          "Flower Joints - 7pk": "7-pack full flower joints"
+          "Bubblehash Infused Joints - 2pk": "2-pack bubble hash infused joints"
+          "Bubblehash Infused Joints - 7pk": "7-pack bubble hash infused joints"
+          "Live Resin Vape - 1g Disposable / All-in-one": "1g disposable vape"
+          "Live Resin Vape - 1g 510 Threaded Cartridge": "1g 510 cart"
+          "Distillate Vape - Disposable / All-In-One": "disposable distillate vape"
+          "Distillate Vape - 510 Threaded Cartridge": "510 distillate cart"
+          "Cured Resin Vape - Disposable / All-In-One": "disposable cured resin vape"
+          "Cured Resin Vape - 510 Threaded Cartridge": "510 cured resin cart"
+          "BHO Concentrate": "BHO extract"
+          "Rosin Concentrates": "Solventless rosin"
+      _parsed_pack_size:
+        description: >
+          Integer pack count parsed from section title (e.g., "2pk" → 2).
+          Use to match the specific pack variant in POSaBIT.
+
 # ── Field rosetta stone (keyed by POSaBIT field) ────
 field_mappings:
   brand_name:
@@ -319,6 +372,7 @@ field_mappings:
     greenlabs_inventory: Vendor
     dutchie: Brand Name
     cultivera: _vendor_name
+    cnduit: Brand Name
     notes: "Also used for matching. For Green Labs, brand is embedded in Product name — LLM extracts it. For Cultivera, extracted from the title row."
 
   strain_name:
@@ -326,6 +380,7 @@ field_mappings:
     greenlabs: STRAIN
     dutchie: Product Name
     cultivera: _parsed_strain
+    cnduit: Product Name
     notes: "Also used for matching. For Dutchie, Product Name often IS the strain — LLM extracts it. For Cultivera, parsed from Product name."
 
   product_type_name:
@@ -333,6 +388,7 @@ field_mappings:
     greenlabs: _product_category
     dutchie: _product_category
     cultivera: _product_category
+    cnduit: _product_category
     notes: Use the category mapping above
 
   name:
@@ -340,6 +396,7 @@ field_mappings:
     greenlabs: Product
     dutchie: Product Name
     cultivera: Product
+    cnduit: Product Name
     notes: Use for name and display_name
 
   display_name:
@@ -347,17 +404,20 @@ field_mappings:
     greenlabs: Product
     dutchie: Product Name
     cultivera: Product
+    cnduit: Product Name
 
   description:
     iheartjane: Product Description
     greenlabs: DESCRIPTION
     dutchie: Description
     cultivera: ~
+    cnduit: Description
 
   lineage:
     iheartjane: ~
     greenlabs: ~
     dutchie: _lineage
+    cnduit: _lineage
     notes: "Populate from vendor data if available. Dutchie Type column maps to lineage (Hybrid, Indica, Sativa, etc.)."
 
   pack_size:
@@ -366,6 +426,7 @@ field_mappings:
     dutchie: _parsed_pack_size
     default: "Items Per Pack"
     cultivera: _parsed_pack_size
+    cnduit: _parsed_pack_size
 
   weight:
     iheartjane: "Amount [g]"
@@ -379,6 +440,7 @@ field_mappings:
     greenlabs: AVATAR_IMAGE
     dutchie: _cover_image_url
     cultivera: ~
+    cnduit: _cover_image_url
     notes: "Primary/hero product image. **Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
 
   image_urls:

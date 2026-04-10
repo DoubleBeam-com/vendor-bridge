@@ -36,7 +36,14 @@ module VendorBridge
             raise ArgumentError, "Unknown source '#{name}'. Available: #{available.join(", ")}"
           end
 
-          src.merge("field_mapping" => field_mapping_for(name.to_s))
+          global_warnings = config["warning_rules"] || []
+          source_warnings = src["warning_rules"] || []
+
+          src.merge(
+            "field_mapping"          => field_mapping_for(name.to_s),
+            "warning_rules"          => global_warnings + source_warnings,
+            "concentrate_type_rules" => config["concentrate_type_rules"]
+          )
         end
 
         # Instantiates the Ruby flatten class for a given source.

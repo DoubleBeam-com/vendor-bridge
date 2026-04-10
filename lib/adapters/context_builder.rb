@@ -16,6 +16,8 @@ module VendorBridge
         cross_cat      = @pipeline["cross_category_matching"] || {}
         disambig       = @pipeline["disambiguating_fields"] || {}
         examples       = @pipeline["matching_examples"] || []
+        warning_rules  = @pipeline["warning_rules"] || []
+        conc_rules     = @pipeline["concentrate_type_rules"] || {}
 
         <<~MD
 # POSaBIT Product Reconciliation
@@ -104,9 +106,10 @@ Save to: **`data_files/reconciliation_output.csv`**
 
 #{field_mapping_text(field_map)}
 
+#{concentrate_type_text(conc_rules, source)}
 ### Audit Trail
 
-Add three extra columns at the end:
+Add four extra columns at the end:
 
 1. **`row_action`** — the app reads this column to build the reconciliation summary:
    - `none` — existing row with no updates
@@ -119,17 +122,16 @@ Add three extra columns at the end:
    - New rows: `new product`
 
 3. **`warnings`** — reviewer alerts that need manual verification:
-   - `capsule/tincture mismatch` — set this when updating
-     `cover_image_url` on an Edible Solid, Edible Liquid, or
-     Capsule product and the vendor's source category suggests a
-     different product form than the POSaBIT row (e.g., vendor
-     says "Tincture" but POSaBIT row is a capsule, or vendor
-     product name contains "Capsule" but POSaBIT row is a
-     tincture). These images must not be applied without
-     verification.
-   - Leave empty when no warnings apply.
+#{warning_rules_text(warning_rules)}
+
+4. **`source_name`** — identifies which vendor source provided the data:
+   - `update` rows: `#{source_label}`
+   - `insert` rows: `#{source_label}`
+   - `none` rows: *(empty)*
 
 These columns are for audit purposes and will not be imported into POSaBIT.
+
+#{warning_rules_table(warning_rules)}
 
 ### Reference
 
@@ -300,6 +302,99 @@ in `Edible Solid`, `Edible Liquid`, or `Capsule`:
         end
         lines << ""
         lines << "For any POSaBIT column not listed above: keep the existing value (for UPDATEs) or leave blank (for NEW)."
+        lines.join("\n")
+      end
+
+      def warning_rules_text(rules)
+        if rules.nil? || rules.empty?
+          return "   - *(No warning rules defined)*\n   - Leave empty when no warnings apply."
+        end
+
+        lines = []
+        rules.each do |rule|
+          text      = rule["warning_text"]&.strip  || "unnamed"
+          trigger   = rule["trigger"]&.strip       || ""
+          condition = rule["condition"]&.strip      || ""
+          action    = rule["action"]&.strip         || ""
+
+          lines << "   - **`#{text}`** — set this when: #{trigger}"
+          lines << "     Condition: #{condition}"
+          lines << "     Action: #{action}"
+        end
+        lines << "   - Leave empty when no warnings apply."
+        lines.join("\n")
+      end
+
+      def warning_rules_table(rules)
+        return "" if rules.nil? || rules.empty?
+
+        lines = [
+          "## IMPORTANT: Warning Rules", "",
+          "You **MUST** check these rules for **EVERY** row and populate the `warnings` column. Multiple warnings can be comma-separated.", "",
+          "| Warning | When | Condition | Action |",
+          "|---|---|---|---|",
+        ]
+        rules.each do |rule|
+          text      = rule["warning_text"]&.strip  || "unnamed"
+          trigger   = rule["trigger"]&.strip       || ""
+          condition = rule["condition"]&.strip      || ""
+          action    = rule["action"]&.strip         || ""
+          lines << "| `#{text}` | #{trigger} | #{condition} | #{action} |"
+        end
+        lines << ""
+        lines.join("\n")
+      end
+
+      def concentrate_type_text(rules, source)
+        return "" if rules.nil? || rules.empty?
+
+        canonical  = rules["canonical_values"] || []
+        categories = rules["apply_to_categories"] || []
+        by_source  = (rules["inference_by_source"] || {})[source] || []
+        notes      = rules["notes"]&.strip
+
+        return "" if canonical.empty? && by_source.empty?
+
+        lines = [
+          "### Concentrate Type Extraction", "",
+          "The `concentrate_type` column identifies the extraction method for concentrate and cartridge products.",
+          "It is **NOT** a direct field mapping — you must infer it from other fields in the source row.", "",
+        ]
+
+        unless canonical.empty?
+          lines << "**Canonical values** (use these exact strings):"
+          lines << canonical.map { |v| "`#{v}`" }.join(", ")
+          lines << ""
+        end
+
+        unless by_source.empty?
+          lines << "**Where to look:**"
+          by_source.each do |rule|
+            field = rule["field"]
+            if rule["mapping"]
+              lines << "- **`#{field}`** — direct mapping:"
+              rule["mapping"].each do |vendor_val, posabit_val|
+                lines << "  - `#{vendor_val}` → `#{posabit_val}`"
+              end
+            elsif rule["method"] == "keyword_scan"
+              lines << "- **`#{field}`** — scan for any canonical concentrate type keyword in the value"
+            end
+            rule_notes = rule["notes"]&.strip
+            lines << "  - #{rule_notes}" if rule_notes
+          end
+          lines << ""
+        end
+
+        unless categories.empty?
+          lines << "**Applies to categories**: #{categories.join(", ")}"
+          lines << ""
+        end
+
+        if notes
+          lines << "**Rules**: #{notes}"
+          lines << ""
+        end
+
         lines.join("\n")
       end
     end

@@ -220,4 +220,189 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
 
     expect(md).to include("```\nid,active,name,brand_name,strain_name\n```")
   end
+
+  context "source_name audit column" do
+    it "includes source_name in audit trail section" do
+      builder = described_class.new(base_pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("**`source_name`**")
+    end
+
+    it "interpolates source label into source_name description" do
+      builder = described_class.new(base_pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`iHeartJane`")
+    end
+  end
+
+  context "with warning_rules" do
+    let(:pipeline_with_warnings) do
+      base_pipeline.merge(
+        "warning_rules" => [
+          {
+            "id" => "capsule_tincture_mismatch",
+            "trigger" => "Updating cover_image_url on Edible Solid/Liquid/Capsule",
+            "condition" => "Vendor source category suggests different product form",
+            "warning_text" => "capsule/tincture mismatch",
+            "action" => "Do NOT apply the image.",
+          },
+          {
+            "id" => "lineage_precision_loss",
+            "trigger" => "Updating lineage",
+            "condition" => "New value less specific than existing",
+            "warning_text" => "lineage precision loss",
+            "action" => "Keep the original value.",
+          },
+        ]
+      )
+    end
+
+    it "renders each warning rule in audit trail" do
+      builder = described_class.new(pipeline_with_warnings)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`capsule/tincture mismatch`")
+      expect(md).to include("`lineage precision loss`")
+    end
+
+    it "renders prominent warning rules table" do
+      builder = described_class.new(pipeline_with_warnings)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("IMPORTANT: Warning Rules")
+      expect(md).to include("| Warning | When | Condition | Action |")
+    end
+
+    it "includes trigger and action in table rows" do
+      builder = described_class.new(pipeline_with_warnings)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Updating cover_image_url")
+      expect(md).to include("Do NOT apply the image.")
+    end
+  end
+
+  context "with empty warning_rules" do
+    it "shows no-rules fallback" do
+      pipeline = base_pipeline.merge("warning_rules" => [])
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("No warning rules defined")
+      expect(md).not_to include("IMPORTANT: Warning Rules")
+    end
+  end
+
+  context "with nil warning_rules" do
+    it "shows no-rules fallback without crash" do
+      pipeline = base_pipeline.merge("warning_rules" => nil)
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("No warning rules defined")
+    end
+  end
+
+  context "with concentrate_type_rules" do
+    let(:pipeline_with_concentrate) do
+      base_pipeline.merge(
+        "concentrate_type_rules" => {
+          "canonical_values" => ["Live Resin", "BHO", "Wax", "Rosin"],
+          "apply_to_categories" => ["Concentrate", "Cartridge"],
+          "inference_by_source" => {
+            "iheartjane" => [
+              { "field" => "Product Name", "method" => "keyword_scan" },
+            ],
+          },
+          "notes" => "Only populate for Concentrate and Cartridge categories.",
+        }
+      )
+    end
+
+    it "renders concentrate type section" do
+      builder = described_class.new(pipeline_with_concentrate)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Concentrate Type Extraction")
+    end
+
+    it "lists canonical values" do
+      builder = described_class.new(pipeline_with_concentrate)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`Live Resin`")
+      expect(md).to include("`BHO`")
+      expect(md).to include("`Wax`")
+      expect(md).to include("`Rosin`")
+    end
+
+    it "renders source-specific keyword scan rules" do
+      builder = described_class.new(pipeline_with_concentrate)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`Product Name`")
+      expect(md).to include("keyword")
+    end
+
+    it "renders applicable categories" do
+      builder = described_class.new(pipeline_with_concentrate)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Concentrate, Cartridge")
+    end
+
+    it "renders notes" do
+      builder = described_class.new(pipeline_with_concentrate)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Only populate for Concentrate and Cartridge")
+    end
+  end
+
+  context "with concentrate_type_rules including direct mapping" do
+    it "renders field mappings" do
+      pipeline = base_pipeline.merge(
+        "concentrate_type_rules" => {
+          "canonical_values" => ["Live Resin", "BHO"],
+          "apply_to_categories" => ["Concentrate"],
+          "inference_by_source" => {
+            "iheartjane" => [
+              {
+                "field" => "_source_subcategory",
+                "mapping" => { "live-resin" => "Live Resin", "bho" => "BHO" },
+              },
+            ],
+          },
+        }
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`_source_subcategory`")
+      expect(md).to include("`live-resin` → `Live Resin`")
+      expect(md).to include("`bho` → `BHO`")
+    end
+  end
+
+  context "with empty concentrate_type_rules" do
+    it "omits concentrate type section" do
+      pipeline = base_pipeline.merge("concentrate_type_rules" => {})
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("Concentrate Type Extraction")
+    end
+  end
+
+  context "with nil concentrate_type_rules" do
+    it "omits concentrate type section without crash" do
+      pipeline = base_pipeline.merge("concentrate_type_rules" => nil)
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("Concentrate Type Extraction")
+    end
+  end
 end

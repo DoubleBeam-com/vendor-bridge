@@ -25,12 +25,8 @@ sources:
         and infused prerolls — check for "infused" in the product name
         to separate them into different product types.
       Edible: >
-        Match the vendor's "Ratio & Product Name" column against the
-        catalog name field, not strain_name.
-        CAUTION: Capsules and tinctures must not be mixed. If a vendor
-        product name contains "Capsule" or "Capsules", do NOT match it
-        against POSaBIT tincture rows, and vice versa. Flag any cross-form
-        matches for manual review.
+        Capsule are mapped to Edible Solid
+        Tinctures are mapped to Edible Liquid
       Vape: >
         The "Ratio & Product Name" column contains the strain name, not
         the product name. Match on brand + strain.
@@ -473,3 +469,127 @@ field_mappings:
     greenlabs: ~
     dutchie: ~
     notes: "Comma-separated flavor names"
+
+# ── Warning rules (global) ───────────────────────────
+# Emitted into every reconciliation context file.
+# The AI must check each rule and populate the `warnings` column.
+warning_rules:
+  - id: capsule_tincture_mismatch
+    trigger: "Updating cover_image_url on Edible Solid, Edible Liquid, or Capsule product"
+    condition: >
+      Vendor source category suggests a different product form than the
+      POSaBIT row (e.g., vendor says "Tincture" but POSaBIT row is a
+      capsule, or vendor product name contains "Capsule" but POSaBIT
+      row is a tincture)
+    warning_text: "capsule/tincture mismatch"
+    action: "Do NOT apply the image. Flag the row for manual review."
+
+  - id: lineage_precision_loss
+    trigger: "Updating lineage on any product"
+    condition: >
+      The new value is less specific than the existing value
+      (e.g., indica_hybrid -> indica, sativa_hybrid -> sativa)
+    warning_text: "lineage precision loss"
+    action: "Keep the original more specific lineage value."
+
+  - id: cross_category_match
+    trigger: "Matching a vendor row to a POSaBIT row in a different category"
+    condition: >
+      The vendor's _product_category (after category mapping) does not
+      match the POSaBIT row's product_type_name
+    warning_text: "cross-category match"
+    action: "Verify this is a legitimate cross-category match, not a mismatch."
+
+  - id: possible_strain_mismatch
+    trigger: "Update row where strain matching is uncertain"
+    condition: >
+      The POSaBIT row's name or strain_name does not fuzzy-match the
+      vendor strain after cleanup
+    warning_text: "possible strain mismatch"
+    action: "Do NOT update. Convert to INSERT or flag for manual review."
+
+  - id: concentrate_type_inferred
+    trigger: "Setting concentrate_type from product name or subcategory"
+    condition: "Value was inferred from name or subcategory, not a dedicated field"
+    warning_text: "concentrate_type inferred"
+    action: "Verify the inferred concentrate type is correct."
+
+# ── Concentrate type inference ────────────────────────
+# concentrate_type is not directly mapped from vendor data. Instead,
+# it must be inferred from other fields in the source row.
+concentrate_type_rules:
+  canonical_values:
+    - Live Resin
+    - BHO
+    - Wax
+    - Sugar Wax
+    - RSO
+    - Crumble
+    - Rosin
+    - Shatter
+    - Distillate
+    - Cured Resin
+    - Bubble Hash
+    - Diamonds
+    - Badder
+    - Sauce
+
+  apply_to_categories:
+    - Concentrate
+    - BHO
+    - Cartridge
+
+  inference_by_source:
+    dutchie:
+      - field: _source_subcategory
+        mapping:
+          "live-resin": "Live Resin"
+          "wax": "Wax"
+          "sugar": "Sugar Wax"
+          "rso": "RSO"
+          "crumble": "Crumble"
+          "rosin": "Rosin"
+          "shatter": "Shatter"
+          "distillate": "Distillate"
+          "badder": "Badder"
+          "sauce": "Sauce"
+          "diamonds": "Diamonds"
+          "cured-resin": "Cured Resin"
+      - field: Product Name
+        method: keyword_scan
+        notes: >
+          Scan the product name for any canonical concentrate type keyword.
+          E.g., "Blue Dream Live Resin Concentrate" -> "Live Resin".
+
+    cnduit:
+      - field: _section_title
+        mapping:
+          "BHO Concentrate": "BHO"
+          "Rosin Concentrates": "Rosin"
+      - field: Product Name
+        method: keyword_scan
+        notes: >
+          Scan the product name for concentrate type keywords if
+          _section_title does not provide a match.
+
+    iheartjane:
+      - field: Product Name
+        method: keyword_scan
+        notes: >
+          iHeartJane does not provide a concentrate subtype field.
+          Scan the product name for concentrate type keywords.
+
+    greenlabs:
+      - field: Product
+        method: keyword_scan
+        notes: >
+          Green Labs does not provide a concentrate subtype field.
+          Scan the product name for concentrate type keywords.
+
+  notes: >
+    Only populate concentrate_type for products in Concentrate, BHO, or
+    Cartridge categories. For Cartridge products, the concentrate_type
+    indicates what type of oil is in the cartridge (e.g., Live Resin,
+    Distillate). For updates, only set concentrate_type if the POSaBIT
+    row's concentrate_type is currently blank. Never overwrite an existing
+    concentrate_type value. If uncertain, leave blank.

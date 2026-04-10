@@ -470,6 +470,14 @@ field_mappings:
     dutchie: ~
     notes: "Comma-separated flavor names"
 
+  source_name:
+    iheartjane: Product Name
+    greenlabs: Product
+    dutchie: Product Name
+    cultivera: Product
+    cnduit: Product Name
+    notes: "Raw product name from the vendor source row — populates the source_name audit column for traceability"
+
 # ── Warning rules (global) ───────────────────────────
 # Emitted into every reconciliation context file.
 # The AI must check each rule and populate the `warnings` column.

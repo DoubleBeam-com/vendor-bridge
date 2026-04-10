@@ -19,6 +19,9 @@ module VendorBridge
         warning_rules  = @pipeline["warning_rules"] || []
         conc_rules     = @pipeline["concentrate_type_rules"] || {}
 
+        source_name_col = field_map.find { |m| (m["posabit"] || m[:posabit]) == "source_name" }
+        source_name_vendor = source_name_col ? (source_name_col["vendor"] || source_name_col[:vendor]) : "Product Name"
+
         <<~MD
 # POSaBIT Product Reconciliation
 
@@ -124,10 +127,11 @@ Add four extra columns at the end:
 3. **`warnings`** — reviewer alerts that need manual verification:
 #{warning_rules_text(warning_rules)}
 
-4. **`source_name`** — identifies which vendor source provided the data:
-   - `update` rows: `#{source_label}`
-   - `insert` rows: `#{source_label}`
+4. **`source_name`** — copy the `#{source_name_vendor}` column from the #{source_label} source row:
+   - `update` rows: the `#{source_name_vendor}` value from the vendor row that matched this POSaBIT row
+   - `insert` rows: the `#{source_name_vendor}` value from the vendor row being inserted
    - `none` rows: *(empty)*
+   - This lets reviewers trace every change back to the exact vendor row that drove it
 
 These columns are for audit purposes and will not be imported into POSaBIT.
 
@@ -356,7 +360,9 @@ in `Edible Solid`, `Edible Liquid`, or `Capsule`:
         return "" if canonical.empty? && by_source.empty?
 
         lines = [
-          "### Concentrate Type Extraction", "",
+          "## IMPORTANT: Concentrate Type Extraction", "",
+          "You **MUST** check concentrate type for every product in the applicable categories below.",
+          "Only use the canonical values listed — **never** invent or use values outside this list.", "",
           "The `concentrate_type` column identifies the extraction method for concentrate and cartridge products.",
           "It is **NOT** a direct field mapping — you must infer it from other fields in the source row.", "",
         ]

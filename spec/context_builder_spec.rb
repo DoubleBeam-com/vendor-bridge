@@ -229,11 +229,31 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
       expect(md).to include("**`source_name`**")
     end
 
-    it "interpolates source label into source_name description" do
-      builder = described_class.new(base_pipeline)
+    it "references the explicit vendor column from field mapping" do
+      pipeline = base_pipeline.merge(
+        "field_mapping" => [
+          { "vendor" => "Brand", "posabit" => "brand_name", "notes" => "" },
+          { "vendor" => "Strain", "posabit" => "strain_name", "notes" => "" },
+          { "vendor" => "Product Name", "posabit" => "source_name", "notes" => "" },
+        ]
+      )
+      builder = described_class.new(pipeline)
       md = builder.generate(data_dir: data_dir)
 
-      expect(md).to include("`iHeartJane`")
+      expect(md).to include("copy the `Product Name` column")
+      expect(md).to include("`Product Name` value from the vendor row")
+    end
+
+    it "falls back to Product Name when no source_name mapping exists" do
+      pipeline = base_pipeline.merge(
+        "field_mapping" => [
+          { "vendor" => "Brand", "posabit" => "brand_name", "notes" => "" },
+        ]
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("copy the `Product Name` column")
     end
   end
 
@@ -321,11 +341,13 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
       )
     end
 
-    it "renders concentrate type section" do
+    it "renders concentrate type section with prominent heading" do
       builder = described_class.new(pipeline_with_concentrate)
       md = builder.generate(data_dir: data_dir)
 
-      expect(md).to include("Concentrate Type Extraction")
+      expect(md).to include("## IMPORTANT: Concentrate Type Extraction")
+      expect(md).to include("**MUST** check concentrate type")
+      expect(md).to include("**never** invent or use values outside this list")
     end
 
     it "lists canonical values" do

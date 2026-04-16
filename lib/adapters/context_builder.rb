@@ -18,6 +18,7 @@ module VendorBridge
         examples       = @pipeline["matching_examples"] || []
         warning_rules  = @pipeline["warning_rules"] || []
         conc_rules     = @pipeline["concentrate_type_rules"] || {}
+        pt_correction  = @pipeline["product_type_correction_rules"] || {}
 
         source_name_col = field_map.find { |m| (m["posabit"] || m[:posabit]) == "source_name" }
         source_name_vendor = source_name_col ? (source_name_col["vendor"] || source_name_col[:vendor]) : "Product Name"
@@ -110,6 +111,7 @@ Save to: **`data_files/reconciliation_output.csv`**
 #{field_mapping_text(field_map)}
 
 #{concentrate_type_text(conc_rules, source)}
+#{product_type_correction_text(pt_correction)}
 ### Audit Trail
 
 Add four extra columns at the end:
@@ -280,15 +282,22 @@ Do NOT overwrite a more specific POSaBIT lineage with a less specific vendor val
 ### 5. Capsule / Tincture image guard
 
 Capsules and tinctures are **very different product forms** that
-must not be mixed. When `cover_image_url` is updated on a product
-in `Edible Solid`, `Edible Liquid`, or `Capsule`:
+must not be mixed. When a cross-category match occurs between
+Edible Solid and Edible Liquid:
 
-- Verify the vendor image actually matches the product form
-  (capsule vs tincture vs gummy vs drink)
-- A capsule image on a tincture row (or vice versa) is **wrong**
-  — do not apply it
-- If the vendor's source category suggests a different product
-  form than the POSaBIT row, flag for manual review
+- **Correct** `product_type_name` to match the vendor's `_product_category`
+  (see Product Type Correction rules above)
+- After correction, the vendor image matches the corrected product form
+  — **apply it** and add `product_type_name` to `updated_fields`
+- A capsule image on a tincture row (or vice versa) is wrong **only if
+  product_type_name was NOT corrected** — flag for manual review
+
+### 6. Concentrate type category guard
+
+Verify that **no** row with `product_type_name` in [Flower, Preroll,
+Edible Solid, Edible Liquid, Topical, Accessories] has a non-blank
+`concentrate_type`. If one does, clear it to blank. Concentrate type
+applies ONLY to Concentrate, BHO, and Cartridge products.
         CHECKLIST
       end
 
@@ -396,8 +405,58 @@ in `Edible Solid`, `Edible Liquid`, or `Capsule`:
           lines << ""
         end
 
+        never_apply = rules["never_apply_to"] || []
+        unless never_apply.empty?
+          lines << "**NEVER set concentrate_type on**: #{never_apply.join(", ")}"
+          lines << ""
+          lines << "If the matched POSaBIT row has a `concentrate_type` but the product's final `product_type_name` is NOT in [#{categories.join(", ")}], **clear it to blank** in the output."
+          lines << ""
+        end
+
         if notes
           lines << "**Rules**: #{notes}"
+          lines << ""
+        end
+
+        lines.join("\n")
+      end
+
+      def product_type_correction_text(rules)
+        return "" if rules.nil? || rules.empty?
+
+        trigger  = rules["trigger"]&.strip
+        action   = rules["action"]&.strip
+        keywords = rules["keyword_overrides"] || []
+        notes    = rules["notes"]&.strip
+
+        lines = [
+          "## IMPORTANT: Product Type Correction (Cross-Category Matches)", "",
+          "When a vendor row matches a POSaBIT row via cross-category search, you **MUST** correct the `product_type_name`.", "",
+        ]
+
+        if trigger
+          lines << "**When**: #{trigger}"
+          lines << ""
+        end
+
+        if action
+          lines << "**Action**: #{action}"
+          lines << ""
+        end
+
+        unless keywords.empty?
+          lines << "**Keyword confirmation** (use product name to confirm the correct type):"
+          lines << ""
+          keywords.each do |kw|
+            kws = (kw["keywords"] || []).map { |k| "`#{k}`" }.join(", ")
+            correct = kw["correct_to"]
+            lines << "- Product name contains #{kws} → `product_type_name` = **#{correct}**"
+          end
+          lines << ""
+        end
+
+        if notes
+          lines << "**Note**: #{notes}"
           lines << ""
         end
 

@@ -40,9 +40,10 @@ module VendorBridge
           source_warnings = src["warning_rules"] || []
 
           src.merge(
-            "field_mapping"          => field_mapping_for(name.to_s),
-            "warning_rules"          => global_warnings + source_warnings,
-            "concentrate_type_rules" => config["concentrate_type_rules"]
+            "field_mapping"                  => field_mapping_for(name.to_s),
+            "warning_rules"                  => global_warnings + source_warnings,
+            "concentrate_type_rules"         => config["concentrate_type_rules"],
+            "product_type_correction_rules"  => config["product_type_correction_rules"]
           )
         end
 

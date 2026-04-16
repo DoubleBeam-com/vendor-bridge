@@ -437,7 +437,7 @@ field_mappings:
     dutchie: _cover_image_url
     cultivera: ~
     cnduit: _cover_image_url
-    notes: "Primary/hero product image. **Always update** from vendor if value starts with http, even if POSaBIT already has an image. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
+    notes: "Primary/hero product image. **ALWAYS** update from vendor when value starts with http — even if POSaBIT already has an image, and even after a cross-category match where product_type_name was corrected. The vendor image corresponds to the vendor's product form, which is authoritative after correction. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
 
   image_urls:
     dutchie: _image_urls
@@ -490,7 +490,10 @@ warning_rules:
       capsule, or vendor product name contains "Capsule" but POSaBIT
       row is a tincture)
     warning_text: "capsule/tincture mismatch"
-    action: "Do NOT apply the image. Flag the row for manual review."
+    action: >
+      Correct product_type_name to match the vendor's _product_category
+      (see product_type_correction_rules). Then apply the vendor image
+      normally. Add 'product_type_name' to updated_fields.
 
   - id: lineage_precision_loss
     trigger: "Updating lineage on any product"
@@ -522,6 +525,34 @@ warning_rules:
     warning_text: "concentrate_type inferred"
     action: "Verify the inferred concentrate type is correct."
 
+# ── Product type correction (cross-category matches) ──
+# When a cross-category match is made (e.g., Edible Solid vendor row
+# matches an Edible Liquid POSaBIT row), the AI must correct the
+# product_type_name to match the vendor's _product_category.
+product_type_correction_rules:
+  trigger: >
+    A vendor row's _product_category (after adapter mapping) does not
+    match the POSaBIT row's product_type_name, and the match was found
+    via cross-category search.
+  action: >
+    Correct product_type_name on the output row to match the vendor's
+    _product_category. Add 'product_type_name' to updated_fields.
+    Then apply all other vendor fields (including cover_image_url)
+    normally.
+  keyword_overrides:
+    - keywords: ["Capsule", "Capsules"]
+      correct_to: "Edible Solid"
+    - keywords: ["Tincture"]
+      correct_to: "Edible Liquid"
+    - keywords: ["Drink", "Beverage", "RTM"]
+      correct_to: "Edible Liquid"
+  notes: >
+    The vendor adapter (e.g., Dutchie) already maps categories correctly
+    in _product_category. When a cross-category match occurs, the vendor's
+    _product_category is authoritative. Product name keywords serve as a
+    secondary confirmation. After correcting product_type_name, the image
+    guard no longer blocks — apply the vendor image.
+
 # ── Concentrate type inference ────────────────────────
 # concentrate_type is not directly mapped from vendor data. Instead,
 # it must be inferred from other fields in the source row.
@@ -546,6 +577,14 @@ concentrate_type_rules:
     - Concentrate
     - BHO
     - Cartridge
+
+  never_apply_to:
+    - Flower
+    - Preroll
+    - "Edible Solid"
+    - "Edible Liquid"
+    - Topical
+    - Accessories
 
   inference_by_source:
     dutchie:
@@ -596,8 +635,12 @@ concentrate_type_rules:
 
   notes: >
     Only populate concentrate_type for products in Concentrate, BHO, or
-    Cartridge categories. For Cartridge products, the concentrate_type
-    indicates what type of oil is in the cartridge (e.g., Live Resin,
-    Distillate). For updates, only set concentrate_type if the POSaBIT
-    row's concentrate_type is currently blank. Never overwrite an existing
-    concentrate_type value. If uncertain, leave blank.
+    Cartridge categories. If the product's final (corrected) product_type_name
+    is NOT in apply_to_categories, concentrate_type MUST be blank — even if
+    the matched POSaBIT row had a value or the product name contains concentrate
+    keywords. When a POSaBIT row has a concentrate_type but the product is not
+    in a concentrate/cartridge category, clear it to blank in the output.
+    For Cartridge products, the concentrate_type indicates what type of oil
+    is in the cartridge (e.g., Live Resin, Distillate). For updates, only set
+    concentrate_type if the POSaBIT row's concentrate_type is currently blank.
+    Never overwrite an existing concentrate_type value. If uncertain, leave blank.

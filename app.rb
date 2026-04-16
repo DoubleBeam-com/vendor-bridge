@@ -132,7 +132,8 @@ module VendorBridge
         "disambiguating_fields"  => source_config["disambiguating_fields"],
         "matching_examples"      => source_config["matching_examples"],
         "warning_rules"          => source_config["warning_rules"],
-        "concentrate_type_rules" => source_config["concentrate_type_rules"],
+        "concentrate_type_rules"         => source_config["concentrate_type_rules"],
+        "product_type_correction_rules"  => source_config["product_type_correction_rules"],
       }
       save_pipeline(pipeline)
 

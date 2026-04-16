@@ -150,6 +150,7 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
     expect(md).to include("Pre-Submit Verification")
     expect(md).to include("INSERT audit")
     expect(md).to include("Lineage sanity check")
+    expect(md).to include("Concentrate type category guard")
   end
 
   context "with name cleanup rules" do
@@ -425,6 +426,93 @@ RSpec.describe VendorBridge::Adapters::ContextBuilder do
       md = builder.generate(data_dir: data_dir)
 
       expect(md).not_to include("Concentrate Type Extraction")
+    end
+  end
+
+  context "with concentrate_type_rules including never_apply_to" do
+    it "renders the blocklist" do
+      pipeline = base_pipeline.merge(
+        "concentrate_type_rules" => {
+          "canonical_values" => ["Live Resin", "BHO"],
+          "apply_to_categories" => ["Concentrate", "Cartridge"],
+          "never_apply_to" => ["Flower", "Edible Solid", "Edible Liquid"],
+          "inference_by_source" => {
+            "iheartjane" => [
+              { "field" => "Product Name", "method" => "keyword_scan" },
+            ],
+          },
+          "notes" => "Only for concentrates.",
+        }
+      )
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("NEVER set concentrate_type on")
+      expect(md).to include("Flower")
+      expect(md).to include("Edible Solid")
+      expect(md).to include("clear it to blank")
+    end
+  end
+
+  context "with product_type_correction_rules" do
+    let(:pipeline_with_pt_correction) do
+      base_pipeline.merge(
+        "product_type_correction_rules" => {
+          "trigger" => "Cross-category match between Edible Solid and Edible Liquid",
+          "action" => "Correct product_type_name to match the vendor's _product_category.",
+          "keyword_overrides" => [
+            { "keywords" => ["Capsule", "Capsules"], "correct_to" => "Edible Solid" },
+            { "keywords" => ["Tincture"], "correct_to" => "Edible Liquid" },
+          ],
+          "notes" => "The vendor adapter already maps categories correctly.",
+        }
+      )
+    end
+
+    it "renders product type correction section with prominent heading" do
+      builder = described_class.new(pipeline_with_pt_correction)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("## IMPORTANT: Product Type Correction")
+      expect(md).to include("**MUST** correct")
+    end
+
+    it "renders keyword overrides" do
+      builder = described_class.new(pipeline_with_pt_correction)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("`Capsule`")
+      expect(md).to include("Edible Solid")
+      expect(md).to include("`Tincture`")
+      expect(md).to include("Edible Liquid")
+    end
+
+    it "renders trigger and action" do
+      builder = described_class.new(pipeline_with_pt_correction)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).to include("Cross-category match")
+      expect(md).to include("Correct product_type_name")
+    end
+  end
+
+  context "with empty product_type_correction_rules" do
+    it "omits product type correction section" do
+      pipeline = base_pipeline.merge("product_type_correction_rules" => {})
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("## IMPORTANT: Product Type Correction")
+    end
+  end
+
+  context "with nil product_type_correction_rules" do
+    it "omits product type correction section without crash" do
+      pipeline = base_pipeline.merge("product_type_correction_rules" => nil)
+      builder = described_class.new(pipeline)
+      md = builder.generate(data_dir: data_dir)
+
+      expect(md).not_to include("## IMPORTANT: Product Type Correction")
     end
   end
 end

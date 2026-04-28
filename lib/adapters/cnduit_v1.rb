@@ -86,9 +86,7 @@ module VendorBridge
             raw["_product_category"] = category
             raw["_source_row"]      = row_num
             raw["_section_title"]   = section[:section_label]
-            original_image_url      = extract_image_url(raw["Image"])
-            raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(original_image_url)
-            raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(original_image_url) ? original_image_url : nil
+            raw["_cover_image_url"] = extract_image_url(raw["Image"])
             lineage = raw["Type"]&.to_s&.strip
             raw["_lineage"]         = (lineage.nil? || lineage.empty?) ? nil : lineage
             raw["_parsed_pack_size"] = section[:pack_size]
@@ -99,6 +97,8 @@ module VendorBridge
         end
 
         xlsx.close
+
+        Transforms::GoogleDriveUrl.apply_to_rows!(all_rows)
 
         synthetic = %w[_source_sheet _product_category _source_row _section_title
                        _cover_image_url _old_cover_image_url _lineage _parsed_pack_size]

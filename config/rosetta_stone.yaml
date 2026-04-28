@@ -408,6 +408,7 @@ field_mappings:
     dutchie: Description
     cultivera: ~
     cnduit: Description
+    notes: "When the description references a product weight (e.g., '7g jar', 'half-gram pre-rolls', '28ct of 1g prerolls', 'an eighth'), update that reference so it matches the row's actual weight and pack_size columns. Vendors often write one description per SKU and POSaBIT bulk-applies it across weight variants, leaving the wrong weight in all but one row. Cases to handle: (1) single weight token mismatch — rewrite '7g jar' → '{weight}g jar'; (2) pack-and-unit form ('Nct of Mg prerolls') — preserve the per-unit weight (M) and recompute N as weight/M, or drop the count if it doesn't divide evenly; (3) vernacular weights ('eighth'=3.5g, 'quarter'=7g, 'half'=14g, 'ounce'=28g) — translate to the row's actual weight. Only touch weight tokens that describe the product's portion size. Skip weight references about lineage, history, ingredients, or batch sizes. If the description has no weight reference, leave it untouched."
 
   lineage:
     iheartjane: ~

@@ -69,9 +69,7 @@ module VendorBridge
             raw["_product_category"] = category
             raw["_source_row"] = row_num
 
-            original_cover = pick_cover_image_url(raw)
-            raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(original_cover)
-            raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(original_cover) ? original_cover : nil
+            raw["_cover_image_url"] = pick_cover_image_url(raw)
 
             all_rows << raw
             kept += 1
@@ -81,6 +79,8 @@ module VendorBridge
         end
 
         xlsx.close
+
+        Transforms::GoogleDriveUrl.apply_to_rows!(all_rows)
 
         synthetic = %w[_source_sheet _product_category _source_row _cover_image_url _old_cover_image_url]
         ordered_columns = synthetic + (all_columns.to_a - synthetic).sort

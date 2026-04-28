@@ -68,15 +68,15 @@ module VendorBridge
           raw["_source_category"] = categories_val.strip
           raw["_source_row"] = row_num
 
-          original_cover = extract_cover_url(raw["AVATAR_IMAGE"])
-          raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(original_cover)
-          raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(original_cover) ? original_cover : nil
+          raw["_cover_image_url"] = extract_cover_url(raw["AVATAR_IMAGE"])
 
           all_rows << raw
           stats[category][:kept] += 1
         end
 
         xlsx.close
+
+        Transforms::GoogleDriveUrl.apply_to_rows!(all_rows)
 
         all_columns.add("_source_category")
         synthetic = %w[_source_sheet _product_category _source_category _source_row

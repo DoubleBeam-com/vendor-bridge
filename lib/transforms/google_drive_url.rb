@@ -78,6 +78,22 @@ module VendorBridge
       def image_extension?(url)
         url.match?(IMAGE_EXT_RE)
       end
+
+      # Walks `rows` and rewrites `source_field` in place when its value is a
+      # Drive view URL, recording the original in `audit_field`. Rows whose
+      # source_field doesn't need rewriting get `audit_field = nil`.
+      def apply_to_rows!(rows, source_field: "_cover_image_url", audit_field: "_old_cover_image_url")
+        rows.each do |row|
+          original = row[source_field]
+          if view_url?(original)
+            row[audit_field] = original
+            row[source_field] = convert(original)
+          else
+            row[audit_field] = nil
+          end
+        end
+        rows
+      end
     end
   end
 end

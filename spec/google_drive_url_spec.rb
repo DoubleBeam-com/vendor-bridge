@@ -114,4 +114,34 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
       expect(described_class.view_url?(42)).to be false
     end
   end
+
+  describe ".apply_to_rows!" do
+    it "rewrites _cover_image_url and stores the original in _old_cover_image_url for Drive view URLs" do
+      rows = [{ "_cover_image_url" => "https://drive.google.com/file/d/abc123/view?usp=sharing" }]
+      described_class.apply_to_rows!(rows)
+      expect(rows.first["_cover_image_url"]).to eq("https://drive.usercontent.google.com/download?id=abc123&export=view&authuser=0")
+      expect(rows.first["_old_cover_image_url"]).to eq("https://drive.google.com/file/d/abc123/view?usp=sharing")
+    end
+
+    it "leaves non-Drive URLs untouched and sets _old_cover_image_url to nil" do
+      rows = [{ "_cover_image_url" => "https://cdn.example.com/foo.png" }]
+      described_class.apply_to_rows!(rows)
+      expect(rows.first["_cover_image_url"]).to eq("https://cdn.example.com/foo.png")
+      expect(rows.first["_old_cover_image_url"]).to be_nil
+    end
+
+    it "handles nil cover URLs without raising" do
+      rows = [{ "_cover_image_url" => nil }]
+      described_class.apply_to_rows!(rows)
+      expect(rows.first["_cover_image_url"]).to be_nil
+      expect(rows.first["_old_cover_image_url"]).to be_nil
+    end
+
+    it "accepts custom source_field and audit_field" do
+      rows = [{ "img" => "https://drive.google.com/file/d/xyz/view" }]
+      described_class.apply_to_rows!(rows, source_field: "img", audit_field: "img_original")
+      expect(rows.first["img"]).to eq("https://drive.usercontent.google.com/download?id=xyz&export=view&authuser=0")
+      expect(rows.first["img_original"]).to eq("https://drive.google.com/file/d/xyz/view")
+    end
+  end
 end

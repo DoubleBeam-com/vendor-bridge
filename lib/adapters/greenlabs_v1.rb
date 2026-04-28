@@ -1,5 +1,6 @@
 require "roo"
 require_relative "registry"
+require_relative "../transforms/google_drive_url"
 
 module VendorBridge
   module Adapters
@@ -67,6 +68,10 @@ module VendorBridge
           raw["_source_category"] = categories_val.strip
           raw["_source_row"] = row_num
 
+          original_cover = extract_cover_url(raw["AVATAR_IMAGE"])
+          raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(original_cover)
+          raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(original_cover) ? original_cover : nil
+
           all_rows << raw
           stats[category][:kept] += 1
         end
@@ -74,13 +79,20 @@ module VendorBridge
         xlsx.close
 
         all_columns.add("_source_category")
-        synthetic = %w[_source_sheet _product_category _source_category _source_row]
+        synthetic = %w[_source_sheet _product_category _source_category _source_row
+                       _cover_image_url _old_cover_image_url]
         ordered_columns = synthetic + (all_columns.to_a - synthetic).sort
 
         { rows: all_rows, columns: ordered_columns, stats: stats }
       end
 
       private
+
+      def extract_cover_url(val)
+        return nil if val.nil?
+        str = val.to_s.strip
+        str.match?(/\Ahttps?:\/\//i) ? str : nil
+      end
 
       def read_headers(xlsx)
         raw = (1..(xlsx.last_column || 0)).map { |c| xlsx.cell(1, c) }

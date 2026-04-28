@@ -432,12 +432,20 @@ field_mappings:
     notes: "Also check Total Weight: Amount x Pack Size. For Dutchie and Cultivera, weight is parsed from Product Name."
 
   cover_image_url:
-    iheartjane: "IMAGE LINK ONLY..."
-    greenlabs: AVATAR_IMAGE
+    iheartjane: _cover_image_url
+    greenlabs: _cover_image_url
     dutchie: _cover_image_url
     cultivera: ~
     cnduit: _cover_image_url
-    notes: "Primary/hero product image. **ALWAYS** update from vendor when value starts with http — even if POSaBIT already has an image, and even after a cross-category match where product_type_name was corrected. The vendor image corresponds to the vendor's product form, which is authoritative after correction. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image."
+    notes: "Primary/hero product image. **ALWAYS** update from vendor when value starts with http — even if POSaBIT already has an image, and even after a cross-category match where product_type_name was corrected. The vendor image corresponds to the vendor's product form, which is authoritative after correction. Dutchie has up to 9 Image columns — adapter picks the first non-nil URL as the cover image. Google Drive 'view' share links are automatically rewritten by the adapter into their direct form (https://drive.usercontent.google.com/download?id=FILE_ID&export=view&authuser=0) — POSaBIT cannot import the preview-page URLs. URLs that already end in a known image extension (.jpg/.png/.webp/etc.) are left untouched. The pre-conversion value is preserved in _old_cover_image_url for reference."
+
+  old_cover_image_url:
+    iheartjane: _old_cover_image_url
+    greenlabs: _old_cover_image_url
+    dutchie: _old_cover_image_url
+    cultivera: ~
+    cnduit: _old_cover_image_url
+    notes: "The original vendor image URL *before* Google Drive rewriting. Empty for rows where the URL did not need conversion (e.g., already-direct S3/CDN links). Purely for audit — do not import into POSaBIT."
 
   image_urls:
     dutchie: _image_urls

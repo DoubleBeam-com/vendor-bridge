@@ -1,5 +1,6 @@
 require "roo"
 require_relative "registry"
+require_relative "../transforms/google_drive_url"
 
 module VendorBridge
   module Adapters
@@ -67,7 +68,8 @@ module VendorBridge
           raw["_source_subcategory"] = raw["Subcategory"]&.to_s&.strip
           raw["_source_row"] = row_num
           cover, additional = extract_image_urls(raw, headers)
-          raw["_cover_image_url"] = cover
+          raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(cover)
+          raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(cover) ? cover : nil
           raw["_image_urls"] = additional
           raw["_terpenes"] = collapse_terpenes(raw, headers)
           raw["_lineage"] = raw["Type"]&.to_s&.strip
@@ -83,7 +85,7 @@ module VendorBridge
         xlsx.close
 
         synthetic = %w[_source_sheet _product_category _source_subcategory _source_row
-                       _cover_image_url _image_urls _terpenes _lineage _parsed_weight _parsed_pack_size]
+                       _cover_image_url _old_cover_image_url _image_urls _terpenes _lineage _parsed_weight _parsed_pack_size]
         synthetic.each { |s| all_columns.add(s) }
         ordered_columns = synthetic + (all_columns.to_a - synthetic).sort
 

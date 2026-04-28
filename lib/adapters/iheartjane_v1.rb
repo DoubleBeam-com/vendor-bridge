@@ -1,6 +1,7 @@
 require "roo"
 require_relative "registry"
 require_relative "../transforms/row_filter"
+require_relative "../transforms/google_drive_url"
 
 module VendorBridge
   module Adapters
@@ -68,6 +69,10 @@ module VendorBridge
             raw["_product_category"] = category
             raw["_source_row"] = row_num
 
+            original_cover = pick_cover_image_url(raw)
+            raw["_cover_image_url"] = Transforms::GoogleDriveUrl.convert(original_cover)
+            raw["_old_cover_image_url"] = Transforms::GoogleDriveUrl.view_url?(original_cover) ? original_cover : nil
+
             all_rows << raw
             kept += 1
           end
@@ -77,8 +82,8 @@ module VendorBridge
 
         xlsx.close
 
-        synthetic = %w[_source_sheet _product_category _source_row]
-        ordered_columns = synthetic + all_columns.to_a.sort
+        synthetic = %w[_source_sheet _product_category _source_row _cover_image_url _old_cover_image_url]
+        ordered_columns = synthetic + (all_columns.to_a - synthetic).sort
 
         { rows: all_rows, columns: ordered_columns, stats: stats }
       end
@@ -96,6 +101,18 @@ module VendorBridge
 
         # Clean whitespace from header names
         raw_headers.map { |h| h&.strip }
+      end
+
+      # Picks the first non-empty URL from any column whose header looks like an
+      # image link field. Used to populate _cover_image_url.
+      def pick_cover_image_url(row)
+        row.each do |header, value|
+          next unless header.is_a?(String) && header =~ /image/i
+          next unless value.is_a?(String)
+          str = value.strip
+          return str if str.match?(/\Ahttps?:\/\//i)
+        end
+        nil
       end
 
       def read_row(xlsx, headers, row_num)

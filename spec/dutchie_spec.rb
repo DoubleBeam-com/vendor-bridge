@@ -13,7 +13,7 @@ RSpec.describe "Dutchie adapter" do
       expect(result[:rows].size).to be > 0
       expect(result[:columns]).to include(
         "_source_sheet", "_product_category", "_source_subcategory", "_source_row",
-        "_cover_image_url", "_image_urls", "_terpenes", "_lineage", "_parsed_weight", "_parsed_pack_size"
+        "_cover_image_url", "_old_cover_image_url", "_image_urls", "_terpenes", "_lineage", "_parsed_weight", "_parsed_pack_size"
       )
       expect(result[:columns]).to include("Product Name", "Brand Name", "Category")
     end
@@ -62,6 +62,28 @@ RSpec.describe "Dutchie adapter" do
       expect(with_image).not_to be_empty
       with_image.each do |row|
         expect(row["_cover_image_url"]).to match(/\Ahttps?:\/\//)
+      end
+    end
+
+    it "rewrites Google Drive view URLs into direct URLs and preserves the original in _old_cover_image_url" do
+      result = adapter.flatten(xlsx_path)
+      drive_rows = result[:rows].select { |r| r["_old_cover_image_url"].to_s.include?("drive.google.com") }
+
+      next if drive_rows.empty?
+
+      drive_rows.each do |row|
+        expect(row["_cover_image_url"]).to match(%r{\Ahttps://drive\.usercontent\.google\.com/download\?id=[^&]+&export=view&authuser=0\z})
+        expect(row["_old_cover_image_url"]).to match(%r{drive\.google\.com/(?:file/d/|open\?id=)})
+      end
+    end
+
+    it "leaves _old_cover_image_url blank for rows whose cover URL did not need converting" do
+      result = adapter.flatten(xlsx_path)
+      non_drive = result[:rows].select { |r|
+        r["_cover_image_url"].is_a?(String) && !r["_cover_image_url"].include?("drive")
+      }
+      non_drive.each do |row|
+        expect(row["_old_cover_image_url"]).to be_nil
       end
     end
 

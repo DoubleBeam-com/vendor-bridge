@@ -8,7 +8,11 @@
       "Bash(ruby -c lib/adapters/iheartjane_v1.rb)",
       "Bash(ruby -c app.rb)",
       "Bash(ruby -e \"require_relative ''lib/adapters/registry''; puts VendorBridge::Adapters::Registry.available.inspect; config = VendorBridge::Adapters::Registry.fetch\\(''iheartjane''\\); puts config[''label'']; puts config[''field_mapping''].length.to_s + '' field mappings''; config[''field_mapping''].each { |m| puts \"\"  #{m[''posabit'']} <- #{m[''vendor'']}\"\" }; puts config[''category_mapping''].inspect\")",
-      "Bash(ruby -e '# encoding: utf-8:*)"
+      "Bash(ruby -e '# encoding: utf-8:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -i -F \"source=cnduit\" -F \"file=@spec/fixtures/cnduit_sample.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" http://localhost:4567/upload)",
+      "Bash(curl -s \"http://localhost:4567/export/6f7610eef45acd91\")",
+      "Bash(curl -sI \"https://drive.usercontent.google.com/download?id=1-KezphBCouyOh2pd4fDax53hul5A2YJh&export=view&authuser=0\")"
     ]
   }
 }

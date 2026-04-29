@@ -1,4 +1,5 @@
 require_relative "spec_helper"
+require "uri"
 
 RSpec.describe "iHeartJane adapter" do
   let(:xlsx_path) { fixture_path("iheartjane_sample.xlsx") }
@@ -99,7 +100,19 @@ RSpec.describe "iHeartJane adapter" do
 
     it "rewrites Google Drive view URLs into direct URLs and preserves the original in _old_cover_image_url" do
       result = adapter.flatten(xlsx_path)
-      drive_rows = result[:rows].select { |r| r["_old_cover_image_url"].to_s.include?("drive.google.com") }
+      drive_rows = result[:rows].select do |r|
+        raw = r["_old_cover_image_url"]
+        next false unless raw.is_a?(String) && !raw.strip.empty?
+
+        begin
+          uri = URI.parse(raw)
+          host = uri.host&.downcase
+          %w[http https].include?(uri.scheme&.downcase) &&
+            (host == "drive.google.com" || host&.end_with?(".drive.google.com"))
+        rescue URI::InvalidURIError
+          false
+        end
+      end
 
       next if drive_rows.empty?
 

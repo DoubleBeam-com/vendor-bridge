@@ -12,7 +12,14 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(curl -s -i -F \"source=cnduit\" -F \"file=@spec/fixtures/cnduit_sample.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" http://localhost:4567/upload)",
       "Bash(curl -s \"http://localhost:4567/export/6f7610eef45acd91\")",
-      "Bash(curl -sI \"https://drive.usercontent.google.com/download?id=1-KezphBCouyOh2pd4fDax53hul5A2YJh&export=view&authuser=0\")"
+      "Bash(curl -sI \"https://drive.usercontent.google.com/download?id=1-KezphBCouyOh2pd4fDax53hul5A2YJh&export=view&authuser=0\")",
+      "Bash(awk '/create_table \"inventory_skus\"/,/^  end$/' /Users/rafael/Sites/posabit/fugu/db/schema.rb)",
+      "Bash(ruby -c app/controllers/vendor/core_products_controller.rb)",
+      "Bash(ruby -c app/models/core/product.rb)",
+      "Bash(ruby -c config/routes.rb)",
+      "Bash(grep -A 20 \"^FactoryBot.define\" /Users/rafael/Sites/posabit/fugu/spec/factories/inventory_skus.rb echo \"---\" grep -A 15 \"^FactoryBot.define\" /Users/rafael/Sites/posabit/fugu/spec/factories/suppliers.rb)",
+      "Bash(RAILS_ENV=test bundle exec rails routes)",
+      "Bash(coffee --version echo \"---\" cd /Users/rafael/Sites/posabit/fugu)"
     ]
   }
 }

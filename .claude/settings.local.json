@@ -19,7 +19,12 @@
       "Bash(ruby -c config/routes.rb)",
       "Bash(grep -A 20 \"^FactoryBot.define\" /Users/rafael/Sites/posabit/fugu/spec/factories/inventory_skus.rb echo \"---\" grep -A 15 \"^FactoryBot.define\" /Users/rafael/Sites/posabit/fugu/spec/factories/suppliers.rb)",
       "Bash(RAILS_ENV=test bundle exec rails routes)",
-      "Bash(coffee --version echo \"---\" cd /Users/rafael/Sites/posabit/fugu)"
+      "Bash(coffee --version echo \"---\" cd /Users/rafael/Sites/posabit/fugu)",
+      "Bash(grep -A 10 \"^FactoryBot.define\" /Users/rafael/Sites/posabit/fugu/spec/factories/images.rb echo \"---\" grep -n \"catalog_management_type\" /Users/rafael/Sites/posabit/fugu/db/schema.rb)",
+      "Bash(awk '/create_table \"merchants\"/,/^  end$/' /Users/rafael/Sites/posabit/fugu/db/schema.rb)",
+      "Bash(awk '/create_table \"products\"/,/^  end$/' /Users/rafael/Sites/posabit/fugu/db/schema.rb)",
+      "Read(//Users/rafael/Sites/posabit/fugu/**)",
+      "Bash(find spec *)"
     ]
   }
 }

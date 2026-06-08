@@ -72,7 +72,7 @@ RSpec.describe "Dutchie adapter" do
       next if drive_rows.empty?
 
       drive_rows.each do |row|
-        expect(row["_cover_image_url"]).to match(%r{\Ahttps://drive\.google\.com/uc\?export=view&id=[^&]+\z})
+        expect(row["_cover_image_url"]).to match(%r{\Ahttps://drive\.usercontent\.google\.com/download\?id=[^&]+&export=view&authuser=0\z})
         expect(row["_old_cover_image_url"]).to match(%r{drive\.google\.com/(?:file/d/|open\?id=)})
       end
     end

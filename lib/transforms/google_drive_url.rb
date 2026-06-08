@@ -9,12 +9,17 @@ module VendorBridge
     #   https://drive.google.com/open?id=FILE_ID
     #
     # These render a Drive preview page, not the image bytes. The direct form is:
-    #   https://drive.usercontent.google.com/download?id=FILE_ID&export=view&authuser=0
+    #   https://drive.google.com/uc?export=view&id=FILE_ID
+    #
+    # (This endpoint 302-redirects to Google's file-serving host and streams the
+    # raw image bytes; it is the widely-used "direct image" link for Drive files.
+    # The previous drive.usercontent.google.com/download?id=...&export=view form is
+    # still recognized as already-direct and left untouched for back-compat.)
     #
     # Non-Google-Drive URLs and nil/blank values are returned unchanged, so it's
     # safe to pipe every vendor image URL through `convert`.
     module GoogleDriveUrl
-      DIRECT_URL = "https://drive.usercontent.google.com/download?id=%s&export=view&authuser=0".freeze
+      DIRECT_URL = "https://drive.google.com/uc?export=view&id=%s".freeze
 
       # Matches: /file/d/<id>/view, /file/d/<id>, /d/<id>
       FILE_PATH_RE = %r{drive\.google\.com/(?:file/)?d/([A-Za-z0-9_-]+)}i

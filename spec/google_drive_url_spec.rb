@@ -6,35 +6,35 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
     it "rewrites the standard /file/d/<id>/view?usp=sharing share link" do
       url = "https://drive.google.com/file/d/1abcDEF_ghi-JKL123/view?usp=sharing"
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=1abcDEF_ghi-JKL123&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=1abcDEF_ghi-JKL123"
       )
     end
 
     it "rewrites /file/d/<id>/view without query params" do
       url = "https://drive.google.com/file/d/ABC123xyz_/view"
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=ABC123xyz_&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=ABC123xyz_"
       )
     end
 
     it "rewrites /file/d/<id> without the trailing /view" do
       url = "https://drive.google.com/file/d/ABC123"
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=ABC123&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=ABC123"
       )
     end
 
     it "rewrites /open?id=<id> links" do
       url = "https://drive.google.com/open?id=XYZ-789_id"
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=XYZ-789_id&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=XYZ-789_id"
       )
     end
 
     it "accepts http as well as https" do
       url = "http://drive.google.com/file/d/foo/view?usp=sharing"
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=foo&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=foo"
       )
     end
 
@@ -43,7 +43,7 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
       expect(described_class.convert(url)).to eq(url)
     end
 
-    it "leaves legacy direct /uc?export=view URLs unchanged (idempotent on previously-rewritten data)" do
+    it "leaves canonical /uc?export=view URLs unchanged (idempotent on rewritten data)" do
       url = "https://drive.google.com/uc?export=view&id=abc123"
       expect(described_class.convert(url)).to eq(url)
     end
@@ -78,7 +78,7 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
     it "trims whitespace before conversion" do
       url = "  https://drive.google.com/file/d/padded/view?usp=sharing  "
       expect(described_class.convert(url)).to eq(
-        "https://drive.usercontent.google.com/download?id=padded&export=view&authuser=0"
+        "https://drive.google.com/uc?export=view&id=padded"
       )
     end
   end
@@ -96,7 +96,7 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
       expect(described_class.view_url?("https://drive.usercontent.google.com/download?id=abc&export=view&authuser=0")).to be false
     end
 
-    it "is false for legacy direct /uc?export=view URLs" do
+    it "is false for canonical /uc?export=view URLs" do
       expect(described_class.view_url?("https://drive.google.com/uc?export=view&id=abc")).to be false
     end
 
@@ -119,7 +119,7 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
     it "rewrites _cover_image_url and stores the original in _old_cover_image_url for Drive view URLs" do
       rows = [{ "_cover_image_url" => "https://drive.google.com/file/d/abc123/view?usp=sharing" }]
       described_class.apply_to_rows!(rows)
-      expect(rows.first["_cover_image_url"]).to eq("https://drive.usercontent.google.com/download?id=abc123&export=view&authuser=0")
+      expect(rows.first["_cover_image_url"]).to eq("https://drive.google.com/uc?export=view&id=abc123")
       expect(rows.first["_old_cover_image_url"]).to eq("https://drive.google.com/file/d/abc123/view?usp=sharing")
     end
 
@@ -140,7 +140,7 @@ RSpec.describe VendorBridge::Transforms::GoogleDriveUrl do
     it "accepts custom source_field and audit_field" do
       rows = [{ "img" => "https://drive.google.com/file/d/xyz/view" }]
       described_class.apply_to_rows!(rows, source_field: "img", audit_field: "img_original")
-      expect(rows.first["img"]).to eq("https://drive.usercontent.google.com/download?id=xyz&export=view&authuser=0")
+      expect(rows.first["img"]).to eq("https://drive.google.com/uc?export=view&id=xyz")
       expect(rows.first["img_original"]).to eq("https://drive.google.com/file/d/xyz/view")
     end
   end

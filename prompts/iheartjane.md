@@ -136,6 +136,14 @@ where the iHeartJane data is newer/better, and appending genuinely new products
 at the bottom. Output = `reconciliation_output.csv`, using the EXACT same columns
 in the EXACT same order as the POSaBIT catalog, plus four audit columns at the end.
 
+The POSaBIT catalog's own header row is authoritative for column names and order —
+copy it exactly. A standard POSaBIT export looks like this (yours may differ
+slightly; if so, follow yours):
+
+```
+id,active,sku_reference,name,display_name,brand_name,product_type_name,concentrate_type,strain_name,lineage,weight,weight_unit,pack_size,cost,min_reorder_qty,terpenes,effects,flavors,description,instructions,ingredients,cover_image_url,image_urls,quantity_on_hand
+```
+
 ### 2a. Matching — for each flattened iHeartJane row, find its POSaBIT match
 
 Match in this order:
@@ -216,12 +224,19 @@ blank (new rows).
 the vendor calls the product something different. Only set `name` from vendor data
 on brand-new insert rows.
 
-**Description weights:** when a description references a weight (e.g. "7g jar",
-"an eighth", "28ct of 1g prerolls") and it doesn't match the row's actual
-weight/pack_size, fix the weight token to match the row. Translate vernacular
-weights (eighth = 3.5g, quarter = 7g, half = 14g, ounce = 28g). Leave weight
-references about lineage/ingredients/batch size alone; if there's no weight
-reference, leave the description untouched.
+**Description weights:** vendors often write one description per SKU and POSaBIT
+bulk-applies it across weight variants, leaving the wrong weight in all but one
+row. When a description references a portion-size weight that doesn't match the
+row's actual `weight`/`pack_size`, fix it. Three cases:
+1. **Single weight token** — rewrite "7g jar" → "{weight}g jar".
+2. **Pack-and-unit form** ("Nct of Mg prerolls") — keep the per-unit weight (M)
+   and recompute the count N as weight ÷ M; drop the count if it doesn't divide
+   evenly.
+3. **Vernacular weights** — translate eighth = 3.5g, quarter = 7g, half = 14g,
+   ounce = 28g to the row's actual weight.
+Only touch weight tokens describing the product's portion size. Leave weight
+references about lineage, history, ingredients, or batch sizes alone. If there's
+no weight reference, leave the description untouched.
 
 ### 2e. Concentrate type (Concentrate, BHO, Cartridge only)
 
@@ -282,7 +297,9 @@ FINAL CHECK (do this before you hand me the files)
    same brand + strain in the same/related category. If one does, it's a variant —
    make it an update instead.
 2. **No duplicate inserts** — no two inserts share brand + strain + category.
-3. **Lineage** — never replaced a more specific lineage with a vaguer one.
+3. **Lineage** — never replaced a more specific lineage with a vaguer one
+   (`indica_hybrid` → `indica` and `sativa_hybrid` → `sativa` are precision loss;
+   `hybrid` → `cbd` is a semantic change — keep the original unless certain).
 4. **Concentrate type guard** — no Flower/Preroll/Edible/Topical/Accessories row
    has a concentrate_type.
 5. **Row count** — every original POSaBIT row is still present in the output.
